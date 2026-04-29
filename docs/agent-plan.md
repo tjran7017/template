@@ -176,7 +176,7 @@
 
 ### 산출물
 
-- `apps/nextjs/package.json` (Next.js 14, React 19, react-query, zustand, react-hook-form, zod, @repo/*)
+- `apps/nextjs/package.json` (Next.js 16, React 19, react-query, zustand, react-hook-form, zod, @repo/*)
 - `next.config.js`
 - `tsconfig.json` (extends `@repo/config/typescript/next`)
 - `eslint.config.js` (`@repo/config/eslint/next` + import zone 규칙)
@@ -327,7 +327,7 @@ Phase 0 ──→ Phase 1 ──┬──→ Phase 2 ─────┬──→
 | 리스크 | 완화 |
 |---|---|
 | Swagger 스펙 없이 api-client 시작 | `src/services/example.ts` + `src/generated/` gitignore, 사용자 스펙 추가 시 절차 README에 명기 |
-| React 19 + Next 14 peer dep 충돌 | 루트 `pnpm.overrides`로 react 19 강제 |
+| React 19 + Next 16 peer dep 충돌 | 루트 `pnpm.overrides`로 react 19 강제 |
 | ESLint 9 flat config 미호환 플러그인 | Phase 1에서 버전 고정, 미호환 시 `FlatCompat` 우회 |
 | Phase 2/3 병렬 중 `packages/*` 동시 수정 충돌 | Phase 1 완전 안정화 후 진입, 패키지 간 수정 금지 |
 | CLAUDE.md 경량화 시 설계 의도 소실 | 제거 전 code-reviewer로 "코드만 봐도 자명한가" 검토 |

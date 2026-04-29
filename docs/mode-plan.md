@@ -125,7 +125,7 @@
 ### [5] apps/nextjs
 
 **구현:**
-- `package.json` (next 14, react 19, react-query, zustand, react-hook-form, zod, vitest, MSW)
+- `package.json` (next 16, react 19, react-query, zustand, react-hook-form, zod, vitest, MSW)
 - `next.config.js`, `tsconfig.json` (config 패키지 상속)
 - `src/app/layout.tsx`, `src/app/providers.tsx`, `src/app/globals.scss`, `src/app/(routes)/page.tsx` (최소 페이지)
 - `src/config/env.ts` (zod 검증)
