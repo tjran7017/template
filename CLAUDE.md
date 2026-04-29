@@ -150,6 +150,8 @@ pnpm --filter=@repo/api-client generate
 - `main`: 항상 배포 가능 상태
 - 작업 브랜치: `feat/*`, `fix/*`, `refactor/*`, `chore/*`
 - PR 머지: **squash merge 기본**
+- PR 제목: 커밋 컨벤션과 동일한 형식 사용 (`<type>(<scope>): <subject>`)
+  - squash merge 시 PR 제목이 커밋 메시지가 되므로 일관성 유지
 
 ### Husky / lint-staged
 
