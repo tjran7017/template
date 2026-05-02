@@ -24,10 +24,9 @@ export default [
     },
   },
   {
-    // codegen/build 스크립트 — dynamic import, process.env, 진행 로그 출력 허용
+    // codegen/build 스크립트 — dynamic import, process.env 등으로 type-unsafe 오탐
     files: ['**/scripts/**/*.ts'],
     rules: {
-      'no-console': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-call': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',

@@ -29,10 +29,8 @@ async function main() {
 
   await Promise.all(
     targets.map(async ({ name, url }) => {
-      console.log(`→ fetching ${name} from ${url}`)
       const ast = await openapiTS(new URL(url))
       await writeFile(join(outDir, `${name}.d.ts`), astToString(ast))
-      console.log(`✓ generated: ${name}.d.ts`)
     }),
   )
 }
