@@ -6,9 +6,12 @@ export default [
       '**/node_modules/**',
       '**/.turbo/**',
       '**/dist/**',
+      '**/storybook-static/**',
       // ESLint 설정 파일 자체는 lint 대상에서 제외 (meta-configuration)
       'packages/config/eslint/**',
       'packages/config/prettier/**',
+      // Storybook 설정 파일은 자체 타입 의존성이라 lint 대상에서 제외
+      '**/.storybook/**',
     ],
   },
   ...baseConfig,
@@ -35,11 +38,12 @@ export default [
     },
   },
   {
-    // 테스트 파일에서 as any 패턴이 필요한 경우 허용
+    // 테스트 파일에서 as any / 외부 라이브러리 모킹 등 type-unsafe 패턴 허용
     files: ['**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts', '**/*.spec.tsx'],
     rules: {
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
     },
   },
 ]

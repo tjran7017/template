@@ -1,0 +1,35 @@
+// src/styles/base.scss
+// Base typography using design tokens
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  color: var(--color-fg);
+  background-color: var(--color-bg);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-sans);
+  line-height: 1.25;
+}
+
+p {
+  line-height: 1.6;
+}
+
+a {
+  color: var(--color-primary);
+
+  &:hover {
+    color: var(--color-primary-hover);
+  }
+}
+
+small {
+  font-size: var(--font-size-sm);
+}

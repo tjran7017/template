@@ -1,0 +1,7 @@
+/* src/tokens/theme.css */
+[data-theme='dark'] {
+  --color-bg: #0a0a0a;
+  --color-fg: #f5f5f5;
+  --color-border: #262626;
+  /* primary 등은 그대로 또는 약간 조정 */
+}
