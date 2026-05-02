@@ -13,11 +13,11 @@ ESLint, TypeScript, Prettier 공통 설정을 제공하는 패키지. 모든 앱
 
 ## 무엇을 / 무엇을 하지 않는가
 
-| 패키지가 하는 일 | 패키지가 하지 않는 일 |
-|---|---|
+| 패키지가 하는 일                                | 패키지가 하지 않는 일                            |
+| ----------------------------------------------- | ------------------------------------------------ |
 | ESLint / TypeScript / Prettier 공통 설정 export | 앱별 / 패키지별 특수 규칙 정의 (사용처가 extend) |
-| 상황별 preset 분리 (next / vite / library) | 단일 거대 설정 강제 |
-| import 의존 방향 / 네이밍 / strict 규칙 강제 | 도메인 / 비즈니스 로직 검사 |
+| 상황별 preset 분리 (next / vite / library)      | 단일 거대 설정 강제                              |
+| import 의존 방향 / 네이밍 / strict 규칙 강제    | 도메인 / 비즈니스 로직 검사                      |
 
 ## 디렉토리 구조
 
@@ -62,14 +62,13 @@ packages/config/
     "./prettier": "./prettier/index.js"
   },
   "dependencies": {
-    "@typescript-eslint/eslint-plugin": "^8.0.0",
-    "@typescript-eslint/parser": "^8.0.0",
+    "typescript-eslint": "^8.0.0",
     "eslint-config-prettier": "^9.0.0",
-    "eslint-plugin-import": "^2.30.0",
+    "eslint-plugin-import-x": "^4.0.0",
     "eslint-plugin-jsx-a11y": "^6.10.0",
     "eslint-plugin-react": "^7.37.0",
     "eslint-plugin-react-hooks": "^5.0.0",
-    "@next/eslint-plugin-next": "^14.2.0",
+    "@next/eslint-plugin-next": "^16.0.0",
     "prettier": "^3.3.0"
   },
   "peerDependencies": {
@@ -85,8 +84,8 @@ packages/config/
 
 ### `eslint/base.js` — 모든 환경 공통
 
-- `@typescript-eslint/recommended-type-checked` 베이스
-- `eslint-plugin-import` — import 순서, 순환 의존 감지
+- `typescript-eslint` 통합 패키지의 `recommendedTypeChecked` 베이스
+- `eslint-plugin-import-x` — import 순서, 순환 의존 감지 (`'import'` 키로 등록 → 규칙명은 `import/order` 등 유지)
 - `eslint-config-prettier` — Prettier 충돌 방지 (마지막에 적용)
 - 핵심 규칙:
   - `@typescript-eslint/no-explicit-any: 'error'` (루트 CLAUDE.md의 "any 금지" 강제)
@@ -209,7 +208,11 @@ export default [
     rules: {
       'import/no-restricted-paths': [
         'error',
-        { zones: [/* 앱별 의존 zone */] },
+        {
+          zones: [
+            /* 앱별 의존 zone */
+          ],
+        },
       ],
     },
   },
@@ -243,12 +246,12 @@ export default [
 
 이 패키지는 **모든 앱과 패키지에 영향**을 미침. 변경 시 다음을 반드시 검증:
 
-| 변경 종류 | 검증 항목 |
-|---|---|
-| ESLint 규칙 추가 | 모든 워크스페이스에서 `pnpm lint` 통과 확인. 통과 안 되면 사전에 코드 마이그레이션 PR 분리 |
-| ESLint 규칙 강화 (warn → error) | 위와 동일 + 충분한 사전 공지 |
-| TypeScript 옵션 강화 (strict 관련) | `pnpm typecheck` 모든 워크스페이스 통과 |
-| Prettier 옵션 변경 | `pnpm prettier --write .` 일괄 실행 후 별도 PR로 적용 (diff가 거대해지므로) |
+| 변경 종류                          | 검증 항목                                                                                  |
+| ---------------------------------- | ------------------------------------------------------------------------------------------ |
+| ESLint 규칙 추가                   | 모든 워크스페이스에서 `pnpm lint` 통과 확인. 통과 안 되면 사전에 코드 마이그레이션 PR 분리 |
+| ESLint 규칙 강화 (warn → error)    | 위와 동일 + 충분한 사전 공지                                                               |
+| TypeScript 옵션 강화 (strict 관련) | `pnpm typecheck` 모든 워크스페이스 통과                                                    |
+| Prettier 옵션 변경                 | `pnpm prettier --write .` 일괄 실행 후 별도 PR로 적용 (diff가 거대해지므로)                |
 
 ## 새 preset 추가 절차
 
@@ -263,9 +266,9 @@ export default [
 ## Claude Code 변경 시 체크리스트
 
 - [ ] 새 규칙 추가 시 모든 워크스페이스의 `pnpm lint` / `pnpm typecheck`가 통과하는가
-- [ ] 규칙이 *모든 환경 공통*이면 `base`에, *React만* 이면 `react`에, *환경 특화*면 환경별 preset에 두었는가
+- [ ] 규칙이 *모든 환경 공통*이면 `base`에, _React만_ 이면 `react`에, *환경 특화*면 환경별 preset에 두었는가
 - [ ] 추가한 ESLint 플러그인을 `dependencies`에 등록했는가 (peerDependency 아님)
 - [ ] Prettier 옵션 변경 시 루트 CLAUDE.md의 "코딩 컨벤션" 섹션과 일치하는가
-- [ ] preset 변경이 *모든 사용처를 즉시 깨는* 종류라면 코드 마이그레이션 PR을 분리했는가
+- [ ] preset 변경이 _모든 사용처를 즉시 깨는_ 종류라면 코드 마이그레이션 PR을 분리했는가
 - [ ] 새 preset이 추가됐다면 `package.json` exports와 README의 사용 예시 모두 갱신했는가
 - [ ] React/Next.js 등 프레임워크 의존 규칙을 `library.js`에 넣지 않았는가
