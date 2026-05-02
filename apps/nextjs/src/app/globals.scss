@@ -1,0 +1,17 @@
+@use '@repo/ui/reset.css';
+@use '@repo/ui/tokens.css';
+@use '@repo/ui/theme.css';
+
+html,
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+}
+
+#__next,
+main {
+  min-height: 100dvh;
+}

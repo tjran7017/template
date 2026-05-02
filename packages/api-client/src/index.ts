@@ -1,5 +1,5 @@
-export { ApiError, isApiError } from './errors.js'
-export type { ServiceConfig, Middleware, ServiceClient } from './core.js'
+export { ApiError, isApiError } from './errors'
+export type { ServiceConfig, Middleware, ServiceClient } from './core'
 export type {
   Schema,
   PathOf,
@@ -8,6 +8,6 @@ export type {
   RequestQuery,
   RequestParams,
   ResponseBody,
-} from './types.js'
-export { createExampleClient } from './services/example.js'
-export type { ExamplePaths } from './services/example.js'
+} from './types'
+export { createExampleClient } from './services/example'
+export type { ExamplePaths } from './services/example'

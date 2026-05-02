@@ -1,4 +1,4 @@
-import { ApiError } from './errors.js'
+import { ApiError } from './errors'
 import type {
   PathOf,
   Method,
@@ -6,7 +6,7 @@ import type {
   RequestQuery,
   RequestParams,
   ResponseBody,
-} from './types.js'
+} from './types'
 
 export type Middleware = {
   onRequest?: (
@@ -42,7 +42,9 @@ type RequestOptions<Paths, P extends PathOf<Paths>, M extends Method<Paths, P>> 
 }
 
 export function createServiceClient<Paths extends object>(config: ServiceConfig) {
-  const baseFetch = config.fetch ?? fetch
+  // fetch는 호출 시점에 해석 — globalThis.fetch를 가로채는 MSW/테스트 더블이
+  // 모듈 로드 후에 패치되어도 정상 동작
+  const resolveFetch = (): typeof fetch => config.fetch ?? globalThis.fetch
 
   type Primitive = string | number | boolean
 
@@ -61,7 +63,10 @@ export function createServiceClient<Paths extends object>(config: ServiceConfig)
     params: { path?: Record<string, Primitive>; query?: Record<string, Primitive> } | undefined,
   ): string {
     const filled = fillPath(path, params?.path)
-    const url = new URL(filled, config.baseUrl)
+    // baseUrl이 path prefix를 포함할 수 있으므로 (gateway 경유), URL 생성자 대신 string concat
+    // new URL('/x', 'http://h/api') → 'http://h/x' (prefix 유실) 회피
+    const base = config.baseUrl.replace(/\/$/, '')
+    const url = new URL(base + filled)
     const query = params?.query
     if (query) {
       for (const [k, v] of Object.entries(query)) {
@@ -105,7 +110,7 @@ export function createServiceClient<Paths extends object>(config: ServiceConfig)
     }
 
     const { url, ...fetchInit } = init
-    let response = await baseFetch(url, fetchInit)
+    let response = await resolveFetch()(url, fetchInit)
 
     // 미들웨어 onResponse
     for (const mw of config.middleware ?? []) {

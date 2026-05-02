@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { ApiError, isApiError } from './errors.js'
+import { ApiError, isApiError } from './errors'
 
 describe('ApiError', () => {
   it('creates from response with JSON body', async () => {

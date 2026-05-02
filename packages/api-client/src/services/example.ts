@@ -1,4 +1,4 @@
-import { createServiceClient, type ServiceConfig } from '../core.js'
+import { createServiceClient, type ServiceConfig } from '../core'
 
 export type ExamplePaths = {
   '/health': {

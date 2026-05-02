@@ -100,6 +100,39 @@
 
 ---
 
+## Phase 4 — 완료 ✅
+
+**브랜치**: `feat/phase-4-nextjs`
+**선행 조건**: Phase 1, 2, 3 완료 후 진입 (Phase 5와 병렬 가능)
+
+### 결정 사항
+
+| 항목                                                          | 결정                                                                                                | 이유                                                                                                           |
+| ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| api-client 소스에서 `.js` extension 제거                      | `from './errors.js'` → `from './errors'`                                                            | Next 16 turbopack은 `.js` → `.ts` extension alias 미지원. `moduleResolution: bundler`라 extension 없이도 동작  |
+| api-client `core.ts`의 fetch 호출 시점 해석                   | `const baseFetch = config.fetch ?? fetch` → `resolveFetch = () => config.fetch ?? globalThis.fetch` | MSW가 `globalThis.fetch`를 모듈 로드 후에 패치 → 캡쳐된 ref가 stale. 호출 시점 lookup으로 해결                 |
+| 루트 `pnpm.overrides`에 `@types/node ^22.10.0`                | 단일 버전으로 핀                                                                                    | apps/nextjs(@types/node 22) + transitive @types/node 25 두 개가 동시에 들어와 `Response.bytes` 타입 충돌 발생  |
+| `next lint` 사용 안 함 → `eslint src` 직접 실행               | Next 16에서 `next lint` deprecated                                                                  | Next 16부터는 ESLint를 직접 실행하는 것이 공식 권장                                                            |
+| `eslint-import-resolver-typescript` 추가                      | `eslint-plugin-import-x` v4가 path alias 해석에 별도 resolver 요구                                  | `@/*` alias가 `import/no-restricted-paths`, `import/order` 등에서 인식되지 않음                                |
+| `import-x/resolver-next` + `createTypeScriptImportResolver()` | 함수 호출 형태로 등록                                                                               | string `'typescript'`으로는 "is not a valid import resolver" 에러                                              |
+| FSD import zone — feature별 enumerate                         | `target: './src/features/health', except: ['./health']` 형태로 feature마다 한 줄                    | `target: './src/features', from: './src/features'` 단일 규칙은 same-feature 내부 import도 차단                 |
+| `vitest.config.ts`에 `esbuild: { jsx: 'automatic' }`          | tsconfig는 `jsx: preserve` (Next 빌드용)                                                            | vitest는 esbuild로 transform — preserve면 JSX가 그대로 남아 `React is not defined` 에러                        |
+| `vitest.setup.ts`에서 `process.env.NEXT_PUBLIC_*` 스텁        | env.ts zod 검증을 통과시키기 위해                                                                   | env.ts가 모듈 로드 시 즉시 parse → 환경변수 없으면 throw로 테스트 부팅 실패                                    |
+| `next.config.js`의 `transpilePackages` 명시                   | `@repo/ui`, `@repo/api-client`                                                                      | 워크스페이스 패키지를 Next가 자동으로 트랜스파일하도록 (소스 직접 export 패턴이라 필수)                        |
+| logger를 `env.ts`에 의존시키지 않음                           | `process.env.NODE_ENV` 직접 read                                                                    | env → logger → env 순환 회피. NODE_ENV는 Node 표준이라 zod 검증 대상 외                                        |
+| 데모 API를 `app/api/health/route.ts` Route Handler로          | baseUrl `http://localhost:3000/api`로 같은 origin                                                   | `https://api.example.com`은 placeholder라 dev에서 DNS 실패 → Route Handler 패턴(BFF) 시연 + 데모 즉시 동작     |
+| api-client `buildUrl`을 string concat으로 수정                | `new URL(filled, baseUrl)` → `new URL(base + filled)`                                               | `new URL('/x', 'http://h/api')`가 path prefix를 잃어 `http://h/x`가 됨 — gateway baseUrl 패턴이 깨지는 실 버그 |
+
+### 인수인계 메모
+
+- **MSW + jsdom + api-client 조합 — fetch 캡쳐 타이밍 이슈**: `setupServer` → `beforeAll(server.listen)` → 테스트 파일 import 순서일 때, api-client가 모듈 로드 시점에 `fetch` ref를 잡으면 MSW 패치 전 stale ref. **해결: api-client에서 fetch를 호출 시점에 해석**. 이 패턴을 다른 클라이언트(Phase 5의 react-vite 포함)에도 동일하게 적용
+- **Next 16 turbopack과 `.js` extension**: 워크스페이스 패키지가 `from './errors.js'` 형태로 import하면 turbopack이 `.ts` 파일을 못 찾음. webpack은 `extensionAlias`로 해결 가능하지만 turbopack은 미지원 → **소스에서 .js extension을 쓰지 않는 것이 호환성 측면에서 유일한 답**
+- **@types/node 충돌**: apps에서 `@types/node ^22` 명시 + 다른 패키지 transitive에서 25 가져오면 둘 다 설치되어 `Response` 타입이 두 갈래로 분기. **루트 `pnpm.overrides`로 단일 버전 강제**가 가장 깔끔
+- **import-x v4 resolver**: 최소 한 번은 명시적으로 `eslint-import-resolver-typescript` 설정. 이 패턴을 react-vite에도 동일하게 적용
+- **FSD import zone 규약**: feature가 늘어날 때마다 `eslint.config.js`에 한 줄 추가 필요. 자동화하려면 동적 zone 생성 (예: `fs.readdirSync('./src/features')`)도 가능하지만 명시적 enumerate가 lint 룰 안정성 면에서 안전
+
+---
+
 ## 구현 패턴 회고
 
 - **에이전트 worktree 격리 병렬화**는 Phase 2/3에서 효과적 — 다만 첫 시도에 Bash 권한 문제로 한 번 실패. 두 번째 시도에서는 파일 작성만 시키고 Bash 작업은 메인 세션에서 처리하는 분담이 안정적
