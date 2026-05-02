@@ -1,4 +1,4 @@
-import { createServiceClient, type ServiceConfig } from '../core.js'
+import { createServiceClient, type ServiceConfig } from '../core'
 
 export type ExamplePaths = {
   '/health': {
@@ -7,6 +7,17 @@ export type ExamplePaths = {
         200: {
           content: {
             'application/json': { status: string }
+          }
+        }
+      }
+    }
+  }
+  '/stats': {
+    get: {
+      responses: {
+        200: {
+          content: {
+            'application/json': { uptime: number; requestsPerMin: number }
           }
         }
       }

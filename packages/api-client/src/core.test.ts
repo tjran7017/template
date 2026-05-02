@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 
-import { createServiceClient } from './core.js'
-import { ApiError } from './errors.js'
+import { createServiceClient } from './core'
+import { ApiError } from './errors'
 
 describe('createServiceClient', () => {
   it('substitutes path parameters in URL', async () => {
