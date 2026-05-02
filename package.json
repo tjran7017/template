@@ -1,0 +1,42 @@
+{
+  "name": "fe-monorepo-template",
+  "private": true,
+  "type": "module",
+  "version": "0.0.0",
+  "description": "Turborepo 기반 프론트엔드 모노레포 템플릿",
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "generate": "turbo run generate",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.6.0",
+    "@commitlint/config-conventional": "^19.6.0",
+    "husky": "^9.1.0",
+    "lint-staged": "^15.4.0",
+    "prettier": "^3.4.0",
+    "turbo": "^2.3.0",
+    "typescript": "^5.7.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,mjs,cjs}": ["prettier --write"],
+    "*.{json,css,scss,md,yaml,yml}": ["prettier --write"]
+  },
+  "prettier": {
+    "semi": true,
+    "singleQuote": true,
+    "tabWidth": 2,
+    "trailingComma": "all",
+    "printWidth": 100,
+    "plugins": []
+  },
+  "packageManager": "pnpm@9.15.0"
+}
