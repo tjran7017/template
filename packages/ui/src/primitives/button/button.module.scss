@@ -1,0 +1,93 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    opacity var(--transition-fast);
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+}
+
+.primary {
+  background-color: var(--color-primary);
+  color: #ffffff;
+
+  &:hover {
+    background-color: var(--color-primary-hover);
+    box-shadow: var(--shadow-sm);
+  }
+
+  &:active {
+    background-color: var(--color-primary-hover);
+    box-shadow: none;
+  }
+}
+
+.secondary {
+  background-color: transparent;
+  color: var(--color-fg);
+  border-color: var(--color-border);
+
+  &:hover {
+    background-color: var(--color-surface);
+    border-color: #cbd5e1;
+  }
+
+  &:active {
+    background-color: var(--color-border);
+  }
+}
+
+.danger {
+  background-color: var(--color-danger);
+  color: #ffffff;
+
+  &:hover {
+    background-color: var(--color-danger-hover);
+    box-shadow: var(--shadow-sm);
+  }
+
+  &:active {
+    background-color: var(--color-danger-hover);
+    box-shadow: none;
+  }
+}
+
+.sm {
+  font-size: var(--font-size-xs);
+  padding: calc(var(--spacing-1) + 1px) var(--spacing-3);
+  border-radius: var(--radius-sm);
+}
+
+.md {
+  // base style은 .button에서 처리
+}
+
+.lg {
+  font-size: var(--font-size-base);
+  padding: var(--spacing-3) var(--spacing-5);
+  border-radius: var(--radius-md);
+}

@@ -1,0 +1,14 @@
+{
+  "extends": "@repo/config/typescript/library",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "allowArbitraryExtensions": true,
+    "jsx": "react-jsx",
+    "outDir": "dist",
+    "rootDir": "."
+  },
+  "include": ["src", ".storybook", "vitest.config.ts", "vitest.setup.ts"]
+}
