@@ -1,0 +1,32 @@
+{
+  "name": "@repo/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./eslint/base": "./eslint/base.js",
+    "./eslint/react": "./eslint/react.js",
+    "./eslint/next": "./eslint/next.js",
+    "./eslint/vite-react": "./eslint/vite-react.js",
+    "./eslint/library": "./eslint/library.js",
+    "./typescript/base": "./typescript/base.json",
+    "./typescript/next": "./typescript/next.json",
+    "./typescript/vite": "./typescript/vite.json",
+    "./typescript/library": "./typescript/library.json",
+    "./prettier": "./prettier/index.js"
+  },
+  "dependencies": {
+    "@next/eslint-plugin-next": "^16.0.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-import-x": "^4.0.0",
+    "eslint-plugin-jsx-a11y": "^6.10.0",
+    "eslint-plugin-react": "^7.37.0",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "prettier": "^3.3.0",
+    "typescript-eslint": "^8.0.0"
+  },
+  "peerDependencies": {
+    "eslint": ">=9.0.0",
+    "typescript": ">=5.6.0"
+  }
+}
