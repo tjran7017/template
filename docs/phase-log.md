@@ -4,10 +4,10 @@
 
 ---
 
-## Phase 0 — 완료
+## Phase 0 — 완료 ✅
 
-**PR**: [#2](https://github.com/tjran7017/template/pull/2) (`feat/phase-0-monorepo-skeleton`)  
-**상태**: PR 오픈, main 미머지
+**브랜치**: `feat/phase-0-monorepo-skeleton`
+**PR**: [#2](https://github.com/tjran7017/template/pull/2) — main 머지 완료
 
 ### 결정 사항
 
@@ -19,19 +19,12 @@
 | lint-staged ESLint          | Phase 0에서 **제외**                | @repo/config 없이 ESLint 설정 불가                       |
 | `turbo.json` lint.dependsOn | `["^build"]` **유지**               | 유지 선택. Phase 4/5 이후 느리면 제거 검토               |
 
-### Phase 1 진입 전 체크리스트
-
-- [ ] `packages/config/package.json`에 `"type": "module"` 추가 (ESM 호환)
-- [ ] Phase 1 완료 후 `lint-staged`에 `eslint --fix` 항목 추가 (루트 `package.json`)
-- [ ] 루트 `tsconfig.json`의 `references` 배열에 `packages/config` 추가
-
 ---
 
-## Phase 1 — 완료
+## Phase 1 — 완료 ✅
 
-**브랜치**: `feat/phase-1-config`  
-**PR**: (오픈 예정)  
-**상태**: 구현 완료, main 미머지
+**브랜치**: `feat/phase-1-config`
+**PR**: [#3](https://github.com/tjran7017/template/pull/3) — main 머지 완료
 
 ### 결정 사항
 
@@ -46,8 +39,179 @@
 | `library.json`에 `outDir: dist`, `rootDir: src` 추가 | 기본값 없으면 `.tsbuildinfo` + declaration이 src/ 오염                                            | composite 패키지는 빌드 산출물 위치 명시 필요                                |
 | 루트 `tsconfig.json` references 갱신 생략            | packages/config에 TS composite 설정 없음                                                          | 소스 없는 패키지를 project reference로 등록하면 오류 가능                    |
 
-### Phase 2/3 진입 전 체크리스트
+---
 
-- [ ] Phase 2 완료 후 `packages/api-client/tsconfig.json`에 `extends: "@repo/config/typescript/library"` 추가
-- [ ] Phase 3 완료 후 `packages/ui/tsconfig.json`에 `extends: "@repo/config/typescript/library"` 추가
-- [ ] 루트 `eslint.config.js` 필요 시 추가 (lint-staged의 `eslint --fix`가 루트 파일에 실행될 때)
+## Phase 2 — 완료 ✅
+
+**브랜치**: `feat/phase-2-api-client`
+**PR**: [#4](https://github.com/tjran7017/template/pull/4) — main 머지 완료
+**병렬**: Phase 3과 worktree 격리로 동시 실행
+
+### 결정 사항
+
+| 항목                                                                     | 결정                                                                          | 이유                                                                                               |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| 런타임 의존성 0                                                          | `dependencies: {}` — 표준 fetch만 사용                                        | 번들 영향 최소, 디버깅 시 DevTools Network 탭이 그대로 작동                                        |
+| 데모 서비스 (`services/example.ts`)                                      | codegen 없이 inline `ExamplePaths` 타입 + `createExampleClient`               | Swagger URL 없이도 패키지 빌드/테스트가 동작해야 함 (CI 환경, 신규 사용자 학습용)                  |
+| `tsconfig.json`에서 `composite: false` override                          | `library.json` preset의 `composite: true`를 끔                                | 소스 직접 export 패키지라 빌드 산출물(dist) 불필요. composite은 단일 파일 트랜스파일 부담만 추가   |
+| `tsconfig.json`에 `rootDir: "."` + `scripts/`, `vitest.config.ts` 포함   | `include: ["src", "scripts", "vitest.config.ts"]`                             | ESLint projectService가 이 파일들을 인식하지 못하면 "not found by the project service" 에러        |
+| `core.ts`: `headers?: HeadersInit` → `RequestInit['headers']`            | `HeadersInit`은 DOM lib 타입                                                  | base.json `lib: ["ES2022"]`만이라 `HeadersInit` 미존재. `RequestInit['headers']`는 동일 의미       |
+| `core.ts`: `fillPath` params 타입을 `string \| number \| boolean`로 좁힘 | `Record<string, unknown>`은 `String(value)`에서 `no-base-to-string` lint 에러 | unknown은 객체일 수 있어 `[object Object]`로 stringify될 위험. primitive로 좁혀 정확성 + lint 통과 |
+| `scripts/generate.ts`의 `console.log` 제거                               | 진행 로그 출력 자체를 제거                                                    | `no-console: ['error', { allow: ['warn', 'error'] }]` 위반. 로그가 필수가 아니라면 제거가 깔끔     |
+| 루트 `eslint.config.js`에 `**/scripts/**/*.ts` 오버라이드 추가           | `process.env`, dynamic import 등 type-unsafe 규칙 해제                        | codegen 스크립트는 본질적으로 동적이라 type-aware 규칙이 오탐을 많이 냄                            |
+| 루트 `eslint.config.js`에 `**/*.test.ts` 오버라이드 추가                 | `no-unsafe-assignment`, `no-unsafe-argument` 해제                             | 테스트에서 `as any`로 generic 좁히는 패턴이 흔함. 모든 테스트 파일에 disable 주석 다는 것 비현실적 |
+
+### 인수인계 메모
+
+- **`@repo/api-client`는 worktree 격리로 Phase 3과 병렬 진행** — Agent tool에 `isolation: "worktree"` 옵션. 두 phase가 서로 무의존이라 가능
+- **첫 시도에서 Bash 권한 문제로 worktree 에이전트가 멈춤** — 파일 작성만 에이전트에게 시키고 git/pnpm은 메인 세션에서 실행하는 패턴이 안정적
+- **lint-staged 첫 commit 시 ESLint가 `vitest.config.ts`/`scripts/generate.ts`를 못 찾아 실패** — tsconfig include + 루트 eslint 오버라이드로 해결. 사후 추가 패키지에도 동일 패턴 필요
+
+---
+
+## Phase 3 — 완료 ✅
+
+**브랜치**: `feat/phase-3-ui`
+**PR**: [#5](https://github.com/tjran7017/template/pull/5) — main 머지 완료
+**병렬**: Phase 2와 worktree 격리로 동시 실행
+
+### 결정 사항
+
+| 항목                                                          | 결정                                                                      | 이유                                                                                                          |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| 시작 컴포넌트 범위                                            | Button, Card 두 개로 한정 (Input, Label 제거)                             | 데모는 디자인 토큰 + 컴포넌트 패턴 검증이 목적. primitive 종류는 사용처에서 필요해질 때 추가                  |
+| Card composite는 named export (`CardHeader/Body/Footer`)      | `Object.assign(Card, { Header, Body, Footer })` dot-notation 사용 안 함   | IDE 타입 추론이 더 명확, 트리 셰이킹 효율, 개별 import 가능                                                   |
+| Props 타입은 `React.ComponentPropsWithRef<'tag'>`             | `React.ButtonHTMLAttributes<HTMLButtonElement> & { ref?: ... }` 패턴 대체 | `ref`가 자동 포함, 태그 이름만으로 element 타입과 ref 타입 한 번에 추론                                       |
+| SCSS Modules는 명시적 `*.module.scss.d.ts` 작성               | `Record<string, string>` 와일드카드 ambient 선언 사용 안 함               | 와일드카드는 `noUncheckedIndexedAccess`와 결합해 모든 접근이 `string \| undefined`가 되어 lint 에러 다발      |
+| `tsconfig.json`에 `allowArbitraryExtensions: true`            | TypeScript 5.0+ 옵션                                                      | `import styles from './x.module.scss'` 시 `./x.module.scss.d.ts`를 자동 발견하게 해줌                         |
+| `tsconfig.json`에 `lib: [ES2022, DOM, DOM.Iterable]` 추가     | `library.json` 기본 `lib: ["ES2022"]`에 DOM 추가                          | UI 패키지는 브라우저 환경. `querySelector`, `HTMLElement` 등 DOM 타입 필요                                    |
+| JSDoc 주석은 `@example` 태그 금지, 코드 펜스만 사용           | `/** \`\`\`tsx ... \`\`\` \*/` 형태                                       | `@example` 태그를 쓰면 Storybook autodocs가 Example 섹션으로 자동 렌더링. IDE hover만 필요한 경우 코드 펜스만 |
+| `vitest.config.ts`에 `globals: true`                          | Vitest globals 활성화                                                     | `@testing-library/react` v15+의 auto-cleanup이 `afterEach` 글로벌 등록 필요                                   |
+| `vitest.setup.ts`는 `@testing-library/jest-dom/vitest` import | 일반 `@testing-library/jest-dom`이 아닌 vitest 전용 진입점                | 후자는 `expect.extend()`를 직접 호출 — `expect`가 setup file scope에 없으면 ReferenceError                    |
+| `jest-axe` `toHaveNoViolations`는 setup에서 명시적 등록       | `expect.extend(toHaveNoViolations)` 호출                                  | `@testing-library/jest-dom/vitest`가 자동 등록 안 함. 명시적 등록 필요                                        |
+| 루트 `eslint.config.js`에 `**/.storybook/**` ignore           | Storybook 설정 파일은 lint 대상 제외                                      | `.storybook/main.ts`, `preview.ts`가 ESLint projectService에서 발견되지 않는 문제 회피                        |
+
+### 인수인계 메모
+
+- **`storybook` 패키지를 `@storybook/react-vite`와 별도로 devDependency에 명시 필요** — `storybook/internal/preview/runtime`을 못 찾아 dev server가 vite import 에러로 실패. pnpm strict 모드에서는 transitive 의존을 자동으로 끌어오지 않음
+- **`@storybook/react`도 별도 추가 필요** — `@storybook/react-vite`의 peerDependency라 자동 설치 안 됨. 스토리 파일의 `import type { Meta, StoryObj } from '@storybook/react'`가 깨짐
+- **CSS Module 클래스가 lint에서 "Cannot resolve" 에러로 보일 때** — 진짜 원인은 `allowArbitraryExtensions` 누락. `*.scss.d.ts`만 만들어도 이 옵션 없으면 TypeScript가 임포트 자체를 거부
+- **main 머지 시 Phase 2/3 충돌 지점**: `eslint.config.js`의 test 오버라이드 + `pnpm-lock.yaml`. Phase 3에서 main을 merge받아 둘 다 유지하는 방향으로 해결
+
+---
+
+## 구현 패턴 회고
+
+- **에이전트 worktree 격리 병렬화**는 Phase 2/3에서 효과적 — 다만 첫 시도에 Bash 권한 문제로 한 번 실패. 두 번째 시도에서는 파일 작성만 시키고 Bash 작업은 메인 세션에서 처리하는 분담이 안정적
+- **`@repo/config`의 strict TypeScript 옵션이 광범위한 영향**을 줌 — `noUncheckedIndexedAccess`는 SCSS Module 와일드카드 타입과 충돌, `verbatimModuleSyntax`는 `esModuleInterop` 비호환. 이런 충돌 케이스는 Phase 2/3 진행 중에 발견 → config 패키지 자체 수정보다는 사용처에서 명시적 타입 선언으로 우회
+- **flat config 환경에서 패키지별 nested `eslint.config.js`는 작동하지 않음** — lint-staged가 root에서 실행되어 root config만 사용. 패키지별 오버라이드는 root config에서 `files:` glob으로 정의 (`**/scripts/**/*.ts`, `**/*.test.ts` 등)
+- **README/CLAUDE.md 톤 통일** — 모든 패키지(`@repo/config`, `@repo/api-client`, `@repo/ui`)의 README는 "실제 라이브러리 레퍼런스 톤" (Why/How/Result/FAQ 제거, Installation/Usage/API 표 형식). CLAUDE.md는 중복 코드 블록 제거, 실제 파일 링크 위주. Phase 4/5 앱 문서도 동일 패턴 적용
+
+---
+
+## Phase 4/5 진입 전 체크리스트
+
+Phase 4 (`apps/nextjs`) / Phase 5 (`apps/react-vite`)는 병렬 진행 가능. 진입 전 다음을 확인.
+
+### 사용 가능한 패키지
+
+- `@repo/config/eslint/next` (Phase 4) / `@repo/config/eslint/vite-react` (Phase 5)
+- `@repo/config/typescript/next` / `@repo/config/typescript/vite`
+- `@repo/api-client` — `createExampleClient`만 export됨 (실 서비스는 사용처에서 codegen 후 추가)
+- `@repo/ui` — `Button`, `Card`, `CardHeader/Body/Footer`, `tokens.css`, `theme.css`, `reset.css`, `tokens` (TS 객체), `cn`
+
+### 앱 tsconfig 권장 설정
+
+```json
+{
+  "extends": "@repo/config/typescript/next", // 또는 vite
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": { "@/*": ["./src/*"] },
+    "allowArbitraryExtensions": true // SCSS Modules 사용 시 필수 (ui 패키지에서 검증된 패턴)
+  },
+  "include": ["src", "next-env.d.ts"] // Vite는 next-env.d.ts 제외
+}
+```
+
+### 앱 eslint.config.js 권장 패턴
+
+```js
+import nextConfig from '@repo/config/eslint/next' // 또는 vite-react
+
+export default [
+  ...nextConfig,
+  {
+    rules: {
+      // FSD 스타일 import zone (앱 특화)
+      'import/no-restricted-paths': [
+        'error',
+        {
+          zones: [
+            {
+              target: [
+                './src/components',
+                './src/hooks',
+                './src/lib',
+                './src/stores',
+                './src/utils',
+              ],
+              from: ['./src/features', './src/app'],
+            },
+          ],
+        },
+      ],
+    },
+  },
+]
+```
+
+### 루트 `eslint.config.js`에 추가할 ignore
+
+앱이 들어오면 빌드 산출물 ignore 추가 필요:
+
+- Next.js: `apps/*/.next/**`
+- Vite: `apps/*/dist/**` (이미 `**/dist/**`로 커버됨)
+- 둘 다: `apps/*/node_modules/**` (이미 `**/node_modules/**`로 커버됨)
+
+### 글로벌 CSS import 위치
+
+- **Next.js**: `apps/nextjs/src/app/layout.tsx`에서 `@repo/ui/reset.css`, `@repo/ui/tokens.css`, `@repo/ui/theme.css` import
+- **Vite**: `apps/react-vite/src/main.tsx`에서 동일하게 import
+
+### `@repo/api-client` 통합 패턴
+
+- 데모용 `createExampleClient`는 그대로 두고 호출 예시로 사용
+- 실 서비스 추가 시: `.env`에 `<SERVICE>_SWAGGER_URL` 추가 → `pnpm --filter=@repo/api-client generate` → `services/<name>.ts` 작성 → `index.ts` export 추가
+- 앱은 `apps/<n>/src/lib/api-client.ts`에서 인스턴스 생성 (baseURL, getAuthToken, onUnauthorized 주입)
+
+### MSW / 테스트 설정
+
+- agent-plan.md 기준: MSW는 패키지 공통화 안 함, 앱별로 셋업 (`apps/<n>/src/testing/`)
+- vitest 설정 패턴은 `@repo/ui` 사례 참고 (`globals: true`, `vitest.setup.ts`에서 `@testing-library/jest-dom/vitest` import)
+
+### 환경변수 패턴
+
+- 컴포넌트에서 `process.env` / `import.meta.env` 직접 접근 금지 (루트 CLAUDE.md 절대 규칙)
+- 각 앱의 `src/config/env.ts` (또는 `src/lib/env.ts`)에서 zod로 검증된 객체 export
+- 패키지(`@repo/api-client`, `@repo/ui`)는 환경변수를 직접 읽지 않음 — 앱이 인자로 주입
+
+### 문서 톤 (Phase 0~3에서 확립된 패턴)
+
+- **`apps/<n>/README.md`** — 실제 라이브러리 톤. Quick Start, 디렉토리 구조, 주요 패턴, 명령어. Why/How/Result/FAQ 금지
+- **`apps/<n>/CLAUDE.md`** — 컨벤션, 의존 규칙, 변경 시 체크리스트. 중복 코드 블록 금지 (실제 파일 링크 위주)
+- 두 문서 역할 분리는 루트 CLAUDE.md "문서화 원칙" 참조
+
+### 알려진 제약 (Phase 2/3에서 발견, 앱에도 적용)
+
+- `composite: true` + `rootDir: "src"` + 외부 파일(scripts, vitest.config) → ESLint projectService 에러 (`composite: false` + `rootDir: "."` + `include` 확장으로 해결)
+- SCSS Modules 사용 시 `*.module.scss.d.ts` + `allowArbitraryExtensions: true` 둘 다 필수
+- Storybook 설정 파일은 lint 대상 제외 (`**/.storybook/**` ignore)
+- React 19에서는 `forwardRef` 사용 금지, ref를 일반 prop으로
+
+### Phase 6 (통합 검증)에서 회수해야 할 것들
+
+- 루트 CLAUDE.md "패키지 의존 규칙" 다이어그램이 실 구성과 일치하는지 확인
+- 모든 README가 동일 톤 (Why/How/Result 금지)
+- 모든 CLAUDE.md가 동일 톤 (중복 코드 블록 금지)
+- 루트 CLAUDE.md 자체 경량화 (agent-plan.md "Phase 6" 섹션 참조)
