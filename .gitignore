@@ -1,0 +1,33 @@
+# dependencies
+node_modules
+
+# build outputs
+dist
+.next
+out
+
+# turbo
+.turbo
+
+# typescript
+*.tsbuildinfo
+
+# generated
+src/generated
+
+# env
+.env
+.env.*
+!.env.example
+
+# testing
+coverage
+
+# storybook
+storybook-static
+
+# misc
+.DS_Store
+*.log
+npm-debug.log*
+pnpm-debug.log*
