@@ -27,6 +27,17 @@ export default [
     },
   },
   {
+    // codegen/build 스크립트 — dynamic import, process.env 등으로 type-unsafe 오탐
+    files: ['**/scripts/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+    },
+  },
+  {
     // 테스트 파일에서 as any / 외부 라이브러리 모킹 등 type-unsafe 패턴 허용
     files: ['**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts', '**/*.spec.tsx'],
     rules: {
