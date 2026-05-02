@@ -23,4 +23,23 @@ export default [
       '@typescript-eslint/no-unsafe-argument': 'off',
     },
   },
+  {
+    // codegen/build 스크립트 — dynamic import, process.env 등으로 type-unsafe 오탐
+    files: ['**/scripts/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+    },
+  },
+  {
+    // 테스트 파일에서 as any 패턴이 필요한 경우 허용
+    files: ['**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts', '**/*.spec.tsx'],
+    rules: {
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+    },
+  },
 ]
