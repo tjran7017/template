@@ -12,6 +12,17 @@ export type ExamplePaths = {
       }
     }
   }
+  '/stats': {
+    get: {
+      responses: {
+        200: {
+          content: {
+            'application/json': { uptime: number; requestsPerMin: number }
+          }
+        }
+      }
+    }
+  }
 }
 
 export function createExampleClient(config: ServiceConfig) {

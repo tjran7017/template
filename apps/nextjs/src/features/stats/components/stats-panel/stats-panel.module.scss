@@ -1,0 +1,32 @@
+.panel {
+  display: grid;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-3);
+  padding: var(--spacing-3) var(--spacing-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+
+  &.loading {
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  &.fail {
+    border-color: var(--color-danger);
+  }
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.label {
+  color: var(--color-fg-muted);
+}
+
+.value {
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+}

@@ -1,330 +1,371 @@
 # nextjs
 
-Next.js 16 (App Router) 기반 앱 베이스 템플릿. feature 단위 모듈 구조 + 단방향 의존 규칙 적용.
+Next.js 16 (App Router) 기반 앱 베이스 템플릿. feature 단위 모듈 + 단방향 의존 + RSC streaming/CSR Suspense 패턴 데모.
 
 > **상위 문서:** 루트 `CLAUDE.md` (모노레포 공통 규칙)
-> **이 문서가 우선:** Next.js 특화 결정, 디렉토리 구조 / 의존 규칙
+> **이 문서가 우선:** Next.js 특화 결정 — 디렉토리 구조, 데이터 페칭 패턴, 의존 규칙
 
 ## 앱 목적
 
-SSR / SEO / BFF가 필요한 프로젝트의 출발점. SPA로 충분한 경우는 `apps/react-vite`를 사용.
+SSR / SEO / BFF가 필요한 프로젝트의 출발점. SPA로 충분한 경우는 `apps/react-vite`.
 
 ## 기술 스택
 
-- **Next.js 16** (App Router, Server Components 기본)
+- **Next.js 16** (App Router, Turbopack 기본)
 - **React 19** + **TypeScript** strict
-- **React Query** — 클라이언트 사이드 서버 상태
-- **Zustand** — 클라이언트 전역 상태
-- **react-hook-form + zod** — 폼 / 검증
-- **SCSS Modules**
-- **Vitest + React Testing Library** + **MSW** — 테스트
-- **Storybook** — 컴포넌트 카탈로그
+- **React Query 5** — Client-side server state (+ Devtools, dev only)
+- **Zustand** — 전역 클라이언트 상태
+- **react-hook-form + zod** — 폼/검증 / **zod** — 환경변수 검증
+- **SCSS Modules** — `.module.scss + .module.scss.d.ts` 페어
+- **Vitest** + **MSW 2** + **@testing-library/react** + **jest-axe**
+- **`@repo/ui`**, **`@repo/api-client`** (workspace)
 
 ## 디렉토리 구조
 
-Next.js App Router는 `app/` 폴더를 라우팅에 점유하므로, 앱 초기화 코드(프로바이더 등)는 `app/providers.tsx`에 두고 `RootLayout`에서 사용.
+App Router는 `app/`을 라우팅에 점유. 앱 초기화(프로바이더 등)는 `app/providers.tsx`.
 
-모노레포 환경이라 `packages/*`가 대신 제공하는 폴더는 앱에서 제거됨:
+`packages/*`가 대신 제공하는 폴더는 앱에서 제거됨:
 
-| 일반 React 프로젝트의 폴더 | 이 템플릿에서 처리 |
-|---|---|
-| `src/types/` (전역 타입) | API 타입은 `@repo/api-client`의 서비스별 namespace(`UsersComponents['schemas']` 등), UI 타입은 `@repo/ui`. 정말 앱 전역 타입이 생기면 `lib/`에 둠 |
-| `src/assets/` | Next.js의 `public/`을 사용 |
-| `features/{name}/types/` | API 타입은 `@repo/api-client`, 그 외는 같은 feature 내부에서 필요한 파일에 직접 정의 |
-
-전체 구조:
+| 일반 React 폴더          | 이 템플릿 처리                                                                              |
+| ------------------------ | ------------------------------------------------------------------------------------------- |
+| `src/types/` (전역 타입) | API 타입은 `@repo/api-client`의 namespace, UI 타입은 `@repo/ui`. 앱 전역 타입 생기면 `lib/` |
+| `src/assets/`            | Next의 `public/`                                                                            |
+| `features/<n>/types/`    | API 타입은 `@repo/api-client`, 그 외는 같은 feature 안에서 직접 정의                        |
 
 ```
 apps/nextjs/
 ├── src/
-│   ├── app/                  Next.js App Router (라우팅 + 레이아웃)
-│   │   ├── (routes)/         route group — 페이지들
-│   │   ├── api/              Route Handlers (BFF)
+│   ├── app/                      Next App Router (라우팅 + 레이아웃)
+│   │   ├── api/<route>/route.ts  Route Handlers (BFF)
+│   │   ├── <segment>/
+│   │   │   ├── page.tsx          페이지 (얇은 컨테이너)
+│   │   │   ├── loading.tsx       자동 Suspense fallback
+│   │   │   └── error.tsx         자동 Error Boundary ('use client')
 │   │   ├── layout.tsx
-│   │   ├── providers.tsx     QueryClient, Theme 등 클라이언트 프로바이더
-│   │   └── globals.scss
-│   ├── components/           앱 특화 레이아웃/위젯 (디자인 시스템은 @repo/ui)
-│   ├── config/               환경변수(env.ts), 앱 상수
-│   ├── features/             기능 단위 모듈 (가장 많은 코드가 위치)
-│   │   └── {feature-name}/
-│   │       ├── api/          이 기능의 React Query 훅 + 쿼리 키
-│   │       ├── components/   이 기능 전용 컴포넌트
-│   │       ├── hooks/        이 기능 전용 훅
-│   │       ├── stores/       이 기능 전용 zustand store
-│   │       └── utils/        이 기능 전용 유틸
-│   ├── hooks/                앱 전역 공유 훅 (두 곳 이상에서 사용될 때만)
-│   ├── lib/                  외부 라이브러리 래퍼 / 인스턴스화
+│   │   ├── providers.tsx         QueryClientProvider + Devtools (dev only)
+│   │   └── globals.scss          @repo/ui CSS import + .page-container + 키프레임
+│   ├── components/               앱 전용 위젯 (디자인 시스템은 @repo/ui)
+│   │   ├── index.ts              outer barrel
+│   │   └── <name>/
+│   │       ├── index.ts          inner barrel
+│   │       └── <name>.tsx
+│   ├── config/env.ts             zod 검증된 환경변수 (process.env 직접 접근 금지)
+│   ├── features/                 기능 단위 모듈
+│   │   └── <name>/
+│   │       ├── api/
+│   │       │   ├── index.ts      barrel (server + client 함수 모두)
+│   │       │   ├── get-<n>.ts    'server-only'
+│   │       │   └── use-<n>.ts    'use client' + RQ
+│   │       └── components/
+│   │           ├── index.ts      outer barrel
+│   │           └── <name>/
+│   │               ├── index.ts  inner barrel
+│   │               ├── <name>.tsx
+│   │               ├── <name>.module.scss
+│   │               ├── <name>.module.scss.d.ts
+│   │               └── <name>.test.tsx
+│   ├── lib/
 │   │   ├── api-client/
-│   │   │   ├── server.ts     server-only — 서비스별 인스턴스 (쿠키 기반 인증)
-│   │   │   └── client.ts     'use client' — 서비스별 인스턴스 (zustand 토큰)
+│   │   │   ├── server.ts         'server-only' — 서비스 인스턴스
+│   │   │   └── client.ts         'use client' — 서비스 인스턴스 (zustand 토큰)
 │   │   └── logger.ts
-│   ├── stores/               전역 zustand store
-│   ├── testing/              MSW handlers, 테스트 유틸
-│   └── utils/                앱 전역 공유 유틸 (두 곳 이상에서 사용될 때만)
-├── public/                   정적 자산 (이미지, 폰트, favicon 등)
-├── .env.example
-├── next.config.js
-├── tsconfig.json
-└── package.json
+│   ├── stores/                   전역 zustand store
+│   └── testing/
+│       ├── mocks/{handlers,server}.ts
+│       └── test-utils.tsx        renderWithProviders (QueryClient wrapper)
+├── public/
+├── .env.example / .env.local (gitignored)
+├── next.config.js                transpilePackages + optimizePackageImports
+├── tsconfig.json                 extends @repo/config/typescript/next + allowArbitraryExtensions
+├── vitest.config.ts              jsdom + globals + esbuild jsx automatic
+├── vitest.setup.ts               vi.mock('server-only') + env stub + MSW listen
+└── package.json                  sideEffects: ["**/*.css","**/*.scss"]
 ```
 
 > **`components/` vs `@repo/ui` 구분**
-> - `@repo/ui`: 도메인 비종속 디자인 시스템 (Button, Input, Modal, Toast 등)
-> - `components/`: 이 앱 전용 레이아웃/위젯 (AppHeader, PageLayout, AuthGate 등)
-> - 두 앱이 같은 패턴을 쓰기 시작하면 `@repo/ui`로 추출
+>
+> - `@repo/ui`: 도메인 비종속 디자인 시스템 (Button, Card 등)
+> - `components/`: 이 앱 전용 위젯 (BackLink 등 — 페이지/feature 모두에서 재사용)
+> - 두 앱이 같은 패턴을 쓰면 `@repo/ui`로 추출
 
-> **배럴 파일(`index.ts`)을 의도적으로 사용하지 않음.** Next의 트리 셰이킹 효율과 빌드 성능, IDE 자동 import 정확도를 우선. 외부에서는 파일 경로를 직접 import.
+## 컴포넌트 폴더 컨벤션
 
-## 의존 방향 규칙 (단방향)
+각 컴포넌트는 자체 폴더 + inner barrel:
+
+```
+<name>/
+├── index.ts              export { Foo } from './foo'
+├── <name>.tsx            컴포넌트 본체
+├── <name>.module.scss    (필요 시)
+├── <name>.module.scss.d.ts (필요 시 — 명시적 클래스 타입)
+└── <name>.test.tsx       (필요 시)
+```
+
+**outer barrel** (`<카테고리>/index.ts`)이 외부에 노출:
+
+```ts
+// features/health/components/index.ts
+export { HealthSection } from './health-section'
+export { HealthStatus, type HealthState } from './health-status'
+```
+
+**Import 규칙:**
+
+- 외부에서: barrel 사용 (`from '@/features/health/components'`)
+- 같은 폴더 안: 직접 파일 (자기 자신 barrel 참조 회피)
+- 같은 카테고리 cross-folder: inner barrel (`from '../health-status'`)
+
+> **분리 vs 같은 파일**: 단순한 변형(예: `StatsPanelAsync`는 `StatsPanel`의 async wrapper)은 같은 파일에 둠. 분기 로직이 두꺼우면 (예: `HealthSection`이 useHealth + 분기) 별도 폴더.
+
+## 의존 방향 규칙 (단방향, ESLint 강제)
 
 ```
 app  ──→  features  ──→  shared modules (components, hooks, lib, stores, utils)
-                                   ↑
-                              app도 직접 import 가능
+                                       ↑
+                                  app도 직접 import 가능
 ```
 
 원칙:
 
-1. `shared modules`(components, hooks, lib, stores, utils)는 **features와 app을 import할 수 없음**
-2. `features/*`끼리 **서로 import 금지** — 두 feature가 무언가를 공유해야 한다면 `shared modules`로 끌어올리거나, app 레벨에서 조립
-3. `app/`은 features와 shared modules 모두 import 가능
-4. Next.js App Router의 라우트 컴포넌트는 features를 조립하는 역할만 — 비즈니스 로직을 직접 담지 않음
+1. shared modules는 features/app을 import 못 함
+2. features/\* 끼리 import 금지 — 공유 필요시 shared로 끌어올리거나 app에서 조립
+3. app/는 features와 shared 모두 import 가능
+4. page.tsx는 **얇은 컨테이너** — features를 import해서 조립만, 비즈니스 로직 X
 
-이 규칙은 ESLint `import/no-restricted-paths`로 강제:
-
-```json
-"import/no-restricted-paths": [
-  "error",
-  {
-    "zones": [
-      // features끼리 import 금지
-      {
-        "target": "./src/features/auth",
-        "from": "./src/features",
-        "except": ["./auth"]
-      },
-      // shared modules은 features/app을 참조하지 않음
-      {
-        "target": [
-          "./src/components",
-          "./src/hooks",
-          "./src/lib",
-          "./src/stores",
-          "./src/utils"
-        ],
-        "from": ["./src/features", "./src/app"]
-      }
-    ]
-  }
-]
-```
+루트 [`eslint.config.js`](../../eslint.config.js)에서 `import/no-restricted-paths`로 강제. **새 feature 추가 시 zone 한 줄 추가** (`{ target: './apps/nextjs/src/features/<n>', from: './apps/nextjs/src/features', except: ['./<n>'] }`).
 
 ## App Router 사용 규칙
 
-### Server / Client 컴포넌트 구분
+### Server / Client 컴포넌트
 
-- **Server Component가 기본** — `'use client'`는 인터랙션이 필요한 leaf 컴포넌트에만
-- 데이터 페칭은 가능한 한 **Server Component에서** 직접 (서버 fetch + cache)
-- 클라이언트 측 데이터 갱신/뮤테이션은 React Query로
-- 서버 액션(Server Actions)은 폼 / 단순 뮤테이션에 활용 가능, 단 권한·검증은 명시적으로
-- **`use()` 훅** — React 19. Client Component에서 Promise를 Suspense와 함께 읽을 수 있음. Server Component에서 Context를 조건부로 접근할 때도 사용
-- **`ref`를 prop으로 직접** — `forwardRef` 래핑 불필요 (React 19)
+- **Server Component 기본** — `'use client'`는 인터랙션 leaf만
+- 데이터 페칭: 가능한 한 Server Component에서 직접 (서버 fetch + cache)
+- 클라이언트 측 갱신/뮤테이션: React Query
+- React 19: `ref`를 prop으로 직접 (`forwardRef` X)
 
-### 라우팅 컨벤션
+### 라우팅
 
-- 페이지 컴포넌트(`page.tsx`)는 **얇은 컨테이너** — features를 import해서 조립만
+- `page.tsx` = 얇은 컨테이너 (features 조립만)
 - 라우트 그룹 `(group)/`으로 도메인별 묶기 권장
-- 라우트 단위 에러 바운더리(`error.tsx`), 로딩(`loading.tsx`), not-found(`not-found.tsx`) 적극 사용
-- 동적 세그먼트의 파라미터는 **항상 zod로 검증**
+- **`error.tsx` + `loading.tsx`를 라우트마다 둘 것** (`'use client'` 필수 / 정적)
+- 동적 세그먼트 파라미터는 zod 검증
 
 ### Route Handlers (BFF)
 
-- 외부 API 호출 시 시크릿/내부 토큰이 필요하면 클라이언트가 아니라 Route Handler 경유
-- 입력 바디·쿼리는 **zod 스키마로 검증**
-- 에러 응답은 일관된 포맷 (예: `{ ok: false, error: { code, message } }`)
-- 응답 캐싱은 `next/cache`의 `revalidateTag` / `revalidatePath` 활용
+- 시크릿/내부 토큰이 필요하면 클라이언트가 아니라 Route Handler 경유
+- 입력(body/query)을 zod 검증
+- 에러 포맷 일관 (예: `{ ok: false, error: { code, message } }`)
+- 캐싱은 `next/cache`의 `revalidateTag`/`revalidatePath`
 
-## 환경변수
+## 데이터 페칭 패턴
 
-- 정의: `src/config/env.ts`에서 zod로 검증된 객체로 export
-- 클라이언트 노출 변수는 **`NEXT_PUBLIC_` 프리픽스 필수**, 그 외는 서버 전용
-- 컴포넌트에서 `process.env.X` 직접 접근 금지 — 항상 `env` 객체 경유
+### 1) SSR — page-level await (blocking)
+
+페이지 본체가 데이터를 기다린 뒤 렌더. **SEO 결정 정보, above-the-fold, 없으면 화면이 의미 없는 데이터**에 적합. 실패는 throw → `error.tsx`가 처리.
 
 ```ts
-// src/config/env.ts 패턴
-import { z } from 'zod'
+// features/<n>/api/get-<n>.ts
+import 'server-only'
+import { exampleApi } from '@/lib/api-client/server'
 
-const envSchema = z.object({
-  // 클라이언트 노출 (서비스별 baseURL — 게이트웨이 경유 시 path prefix만 다를 수 있음)
-  NEXT_PUBLIC_USERS_API_URL: z.string().url(),
-  NEXT_PUBLIC_ORDERS_API_URL: z.string().url(),
-  NEXT_PUBLIC_APP_ENV: z.enum(['development', 'staging', 'production']),
-  // 서버 전용 (내부망 URL, 시크릿 등)
-  USERS_API_URL_INTERNAL: z.string().url().optional(),
-  INTERNAL_API_TOKEN: z.string().min(1).optional(),
-})
-
-export const env = envSchema.parse({
-  NEXT_PUBLIC_USERS_API_URL: process.env.NEXT_PUBLIC_USERS_API_URL,
-  NEXT_PUBLIC_ORDERS_API_URL: process.env.NEXT_PUBLIC_ORDERS_API_URL,
-  NEXT_PUBLIC_APP_ENV: process.env.NEXT_PUBLIC_APP_ENV,
-  USERS_API_URL_INTERNAL: process.env.USERS_API_URL_INTERNAL,
-  INTERNAL_API_TOKEN: process.env.INTERNAL_API_TOKEN,
-})
+export const getHealth = () => exampleApi.request('/health', { method: 'get' })
 ```
 
-## 데이터 페칭
+```tsx
+// app/<seg>/page.tsx
+const data = await getHealth()
+return <HealthStatus state="ok" label={data.status} />
+```
 
-- **외부 API 호출은 항상 `@repo/api-client`를 통해** (직접 `fetch` 금지)
-- `@repo/api-client`는 백엔드 **서비스별 클라이언트 팩토리**를 제공 (예: `createUsersClient`, `createOrdersClient`)
-- API 클라이언트는 `src/lib/api-client/`에서 **server / client 두 컨텍스트로 분리**, 각 파일에서 **사용하는 모든 서비스 인스턴스를 한 번에 생성**
-  - `server.ts`: `import 'server-only'`, 쿠키 기반 인증
-  - `client.ts`: `'use client'`, zustand 토큰
-- 이 앱에서 사용하지 않는 서비스는 인스턴스화하지 않음 → 트리 셰이킹으로 번들에서 제외
-- Server Component → 직접 호출 후 props 전달
-- Client Component → React Query (`features/*/api/`에 정의)
-- React Query 키 팩토리는 각 feature의 `api/queries.ts`에 정의
-- 도메인 타입은 서비스별 namespace에서 가져옴 — `UsersComponents['schemas']['User']` 등
+### 2) SSR — async Server Component + Suspense (streaming)
+
+page에서 Promise만 시작 (await X) → async sub-component가 await → Promise throw → 부모 `<Suspense>`가 fallback → resolve 후 RSC 청크로 스트리밍 hydrate. **느린 쿼리, 보조 정보, panel 단위 fail 격리**에 적합.
+
+```tsx
+// features/<feature>/components/<component>/<component>.tsx
+export type FooPanelProps =
+  | { state: 'loading' } | { state: 'fail' } | { state: 'ok'; ... }
+
+export function FooPanel(props: FooPanelProps) { ... }
+
+export async function FooPanelAsync({ promise }: { promise: Promise<FooPanelProps> }) {
+  return <FooPanel {...await promise} />
+}
+```
+
+```tsx
+// page.tsx
+const fooPromise = getFoo()
+return (
+  <Suspense fallback={<FooPanel state="loading" />}>
+    <FooPanelAsync promise={fooPromise} />
+  </Suspense>
+)
+```
+
+> **`use()` 훅 사용 안 함** — Promise는 RSC payload로 직렬화되지만 함수(render-prop)는 안 됨. async Server Component 패턴이 더 단순하고 표준. `use()`는 Context 조건부 read 같은 실제 use case에서만.
+
+### 3) CSR — Client Component + React Query
+
+page는 Server Component, 데이터 페칭이 필요한 부분만 'use client' Section.
 
 ```ts
-// src/lib/api-client/client.ts 패턴
+// features/<n>/api/use-<n>.ts
 'use client'
-import {
-  createUsersClient,
-  createOrdersClient,
-  type ServiceConfig,
-} from '@repo/api-client'
-import { env } from '@/config/env'
-import { useAuthStore } from '@/stores/auth'
-
-const sharedConfig: Pick<ServiceConfig, 'getAuthToken' | 'onUnauthorized'> = {
-  getAuthToken: () => useAuthStore.getState().accessToken,
-  onUnauthorized: () => {
-    useAuthStore.getState().clear()
-    window.location.href = '/login'
-  },
-}
-
-export const usersApi = createUsersClient({
-  baseUrl: env.NEXT_PUBLIC_USERS_API_URL,
-  ...sharedConfig,
-})
-
-export const ordersApi = createOrdersClient({
-  baseUrl: env.NEXT_PUBLIC_ORDERS_API_URL,
-  ...sharedConfig,
-})
-```
-
-```ts
-// features/users/api/get-user.ts 패턴
-import { usersApi } from '@/lib/api-client/client'
-import type { UsersComponents } from '@repo/api-client'
 import { useQuery } from '@tanstack/react-query'
+import { exampleApi } from '@/lib/api-client/client'
 
-type User = UsersComponents['schemas']['User']
-
-export const userKeys = {
-  all: ['users'] as const,
-  detail: (id: string) => [...userKeys.all, 'detail', id] as const,
+export const fooKeys = {
+  all: ['foo'] as const,
+  status: () => [...fooKeys.all, 'status'] as const,
 }
 
-export function useUser(id: string) {
+export function useFoo() {
   return useQuery({
-    queryKey: userKeys.detail(id),
-    queryFn: async () => {
-      const { data, error } = await usersApi.GET('/users/{id}', {
-        params: { path: { id } },
-      })
-      if (error) throw error
-      return data
-    },
+    queryKey: fooKeys.status(),
+    queryFn: () => exampleApi.request('/foo', { method: 'get' }),
   })
 }
 ```
 
-> **두 서비스에 같은 이름 스키마가 있어도 충돌 안 됨** — `UsersComponents['schemas']['User']`와 `OrdersComponents['schemas']['User']`는 서로 다른 namespace.
+```tsx
+// features/<feature>/components/<component>/<component>.tsx
+'use client'
+import { useFoo } from '../../api'
 
-> **API Gateway / 직접 통신 둘 다 가능** — 게이트웨이 경유라면 `baseUrl: 'https://api.example.com/users'`, 직접 통신이라면 `baseUrl: 'https://users.api.example.com'`. 패키지는 모르고 앱 설정만으로 전환.
+export function FooSection({ prefix }: { prefix?: string }) {
+  const { data, isLoading, error } = useFoo()
+  if (isLoading) return <FooStatus state="loading" ... />
+  if (error) return <FooStatus state="fail" label={...} />
+  return <FooStatus state="ok" label={data?.status ?? 'unknown'} />
+}
+```
+
+```tsx
+// app/csr/page.tsx (Server Component)
+return (
+  <main className="page-container">
+    <FooSection prefix="CSR" />
+  </main>
+)
+```
+
+> **쿼리 키는 팩토리 객체로** (`fooKeys.status()`) — 매직 스트링 금지
+
+## 환경변수
+
+- `src/config/env.ts`만 `process.env` 접근 (ESLint `no-restricted-properties`로 강제)
+- 클라이언트 노출 변수는 `NEXT_PUBLIC_` 프리픽스
+- `NEXT_PUBLIC_APP_ENV` (development/staging/production)는 dev-only 기능 분기에 사용 (`providers.tsx`의 ReactQueryDevtools 등)
+- 컴포넌트는 항상 `import { env } from '@/config/env'`
+
+`logger.ts`는 예외 — `process.env.NODE_ENV`만 직접 read (env.ts ↔ logger 순환 회피, NODE_ENV는 Node 표준)
+
+## API 클라이언트
+
+- `src/lib/api-client/`에서 server/client 컨텍스트 인스턴스 분리
+  - `server.ts`: `'server-only'`, 쿠키/헤더 기반 인증
+  - `client.ts`: `'use client'`, zustand 토큰 + 401 redirect
+- `getAuthToken: () => ...` lazy getter (매 요청마다 호출 → 토큰 갱신 자동 반영)
+- 도메인 타입은 서비스별 namespace (`UsersComponents['schemas']['User']`)
+- 패키지 자체 패턴은 [`@repo/api-client/CLAUDE.md`](../../packages/api-client/CLAUDE.md) 참조
 
 ## 상태관리
 
-| 종류 | 도구 |
-|---|---|
-| 서버 상태 | React Query |
-| 폼 상태 | react-hook-form + zod |
-| 컴포넌트 로컬 상태 | useState |
-| 전역 클라이언트 상태 | Zustand (도메인별 store 분리) |
-| URL로 표현 가능한 상태 | `useSearchParams` (필터, 페이지네이션, 정렬) |
+| 종류            | 도구                                          |
+| --------------- | --------------------------------------------- |
+| 서버 상태       | React Query (`useQuery` / `useSuspenseQuery`) |
+| 폼 상태         | react-hook-form + zod                         |
+| 컴포넌트 로컬   | useState                                      |
+| 전역 클라이언트 | Zustand (도메인별 store 분리)                 |
+| URL 표현 가능   | `useSearchParams` (필터, 페이지네이션, 정렬)  |
 
-> **원칙:** URL로 표현 가능한 상태는 반드시 URL에 둔다. 새로고침/공유 시 동일한 화면이 재현되어야 함.
+> **원칙:** URL로 표현 가능한 상태는 반드시 URL에 — 새로고침/공유 시 화면 재현
 
 ## 스타일링
 
-- SCSS Modules (`*.module.scss`)
-- 디자인 토큰은 `@repo/ui`의 CSS 변수 사용
-- 글로벌 스타일은 `src/app/globals.scss`에만
-- 다크모드는 CSS 변수 기반 (`data-theme` 속성)
+- SCSS Modules (`*.module.scss`) + 동일 이름 `.d.ts` 페어
+- 디자인 토큰은 `@repo/ui`의 CSS 변수 (`var(--color-primary)` 등) — 하드코딩 금지
+- 글로벌 스타일은 `app/globals.scss`만 — `.page-container` 클래스, 키프레임 등
+- skeleton/loading 애니메이션: `pulse` 키프레임 (globals.scss) 활용
 
 ## 테스트
 
-- **단위 테스트**: shared modules의 유틸/훅, features의 비즈니스 로직
-- **컴포넌트 테스트**: features의 주요 화면 (RTL + MSW)
-- 테스트 파일 위치: 대상 파일 옆 `*.test.ts(x)` 또는 `__tests__/`
-- MSW handlers는 `src/testing/mocks/`에 도메인별 분리
+- **Presentational**: 컴포넌트 단위 (props → DOM 검증). MSW 불필요
+- **통합**: `<XSection />` (hook + 분기) — MSW로 응답 시나리오 테스트 (성공/HTTP 5xx/네트워크 실패)
+- **MSW handlers는 wildcard URL** (`*/api/health`) — baseUrl 변화에 영향 안 받음
+- `renderWithProviders` (test-utils)로 QueryClient wrapping
+- jest-axe로 a11y 검증
+
+### vitest 셋업 주의사항
+
+- `vi.mock('server-only', () => ({}))` 필수 — api 배럴이 server+client 모듈을 같이 re-export하는 구조라 client 컨텍스트인 vitest가 throw
+- `process.env.NEXT_PUBLIC_*` stub을 setup file 최상단에 (env.ts 모듈 로드 전)
+- `esbuild: { jsx: 'automatic' }` (tsconfig는 Next용 `jsx: preserve`라 vitest용 별도)
+
+## 트리 셰이킹
+
+- `package.json`에 `"sideEffects": ["**/*.css", "**/*.scss"]` — JS는 side-effect-free 가정
+- `next.config.js`에 `experimental.optimizePackageImports: ['@repo/ui', '@repo/api-client']` — barrel을 빌드 타임에 직접 파일로 재작성
+- 'use client' 경계를 가로지르는 barrel에 주의 — Next는 잘 처리하지만 'server-only' 모듈은 client 빌드에서 throw로 차단
 
 ## 명령어
 
 ```bash
-pnpm dev              # 개발 서버 (localhost:3000)
-pnpm build            # 프로덕션 빌드
-pnpm start            # 빌드 결과 실행
-pnpm test             # Vitest
-pnpm test:watch
-pnpm typecheck
-pnpm lint
-pnpm storybook        # 컴포넌트 카탈로그
+pnpm --filter=nextjs dev          # localhost:3000
+pnpm --filter=nextjs build
+pnpm --filter=nextjs start
+pnpm --filter=nextjs test
+pnpm --filter=nextjs typecheck
+pnpm --filter=nextjs lint         # eslint src --max-warnings 0 (next lint deprecated)
 ```
 
 ## Claude Code 변경 시 체크리스트
 
-- [ ] **의존 방향**을 위반하지 않는가 (shared → features/app 금지, features 끼리 import 금지)
-- [ ] 새 코드를 어디에 둘지 결정했는가 (한 feature 전용 → `features/<n>/`, 여러 곳에서 사용 → shared modules)
-- [ ] 페이지 컴포넌트(`page.tsx`)가 비즈니스 로직 없이 features를 조립만 하는가
-- [ ] 환경변수가 zod로 검증되고 `env` 객체로 통일되어 사용되는가
-- [ ] 시크릿/내부 토큰이 클라이언트 번들에 포함되지 않는가 (`NEXT_PUBLIC_` 없는 변수가 Client Component에서 접근되지 않는가)
-- [ ] 외부 입력(쿼리 파라미터, 요청 바디, 동적 라우트 세그먼트)을 zod로 검증하는가
-- [ ] API 호출이 `@repo/api-client`의 서비스별 클라이언트(`usersApi`, `ordersApi` 등)를 통하는가 (server/client 인스턴스 올바르게 선택)
-- [ ] 도메인 타입을 서비스별 namespace(`UsersComponents['schemas']` 등)에서 가져오는가 (직접 재정의 X)
+- [ ] **의존 방향** 준수 (shared → features/app 금지, features 끼리 금지)
+- [ ] 새 코드 위치 결정 (한 feature 전용 → `features/<n>/`, 여러 곳 → shared)
+- [ ] page.tsx가 features 조립만 하고 비즈니스 로직 없는가
+- [ ] 환경변수가 zod 검증되고 `env` 객체로만 사용되는가
+- [ ] 시크릿/내부 토큰이 클라이언트 번들에 안 들어가는가 (`'server-only'` 마커 또는 server.ts/client.ts 분리)
+- [ ] 외부 입력(query/body/dynamic segment)을 zod 검증
+- [ ] API 호출이 `@repo/api-client` 인스턴스 통하는가 (server/client 올바르게)
+- [ ] **새 feature 추가 시**: ESLint zone 한 줄 추가 + `api/index.ts`, `components/index.ts` barrel 생성
+- [ ] **새 컴포넌트 추가 시**: `<name>/<name>.tsx + index.ts` 폴더 생성, outer barrel에 등록
+- [ ] **새 라우트 추가 시**: `loading.tsx` + `error.tsx` 동반 검토
+- [ ] 데이터 페칭이 streaming 가능하면 async Server Component + Suspense 우선
+- [ ] 새 컴포넌트의 SCSS Module엔 `.d.ts` 페어 작성
+- [ ] 통합 컴포넌트(Section)엔 MSW 통합 테스트 1개 (성공/실패)
+- [ ] React Query 키는 팩토리 객체 (매직 스트링 X)
 - [ ] URL로 표현 가능한 상태가 URL 밖에 갇혀있지 않은가
-- [ ] 새 외부 도메인/스크립트 추가 시 보안 헤더(CSP)에 반영했는가
-- [ ] `components/`에 추가한 게 `@repo/ui`로 빠져야 할 도메인 비종속 컴포넌트는 아닌가
+- [ ] `components/`에 추가한 게 `@repo/ui`로 빠져야 할 도메인 비종속 컴포넌트 아닌가
 
 ## 참고 패턴
 
 ```ts
 // 환경변수
-import { env } from '@/config/env'              // ✅
+import { env } from '@/config/env' // ✅
 // process.env.X                                  // ❌
 
-// API 호출 (Server Component) — 서비스별 인스턴스
-import { usersApi, ordersApi } from '@/lib/api-client/server'
+// API 호출 (Server Component)
+import { exampleApi } from '@/lib/api-client/server'
 
 // API 호출 (Client Component)
-import { usersApi, ordersApi } from '@/lib/api-client/client'
+import { exampleApi } from '@/lib/api-client/client'
 
 // 도메인 타입 — 서비스별 namespace
-import type { UsersComponents, OrdersComponents } from '@repo/api-client'
-type User = UsersComponents['schemas']['User']
-type Order = OrdersComponents['schemas']['Order']
+import type { ExamplePaths } from '@repo/api-client'
 
-// feature 내부 import (배럴 파일 없음, 직접 경로)
-import { UserList } from '@/features/users/components/user-list'
+// feature import (barrel)
+import { HealthSection, HealthStatus } from '@/features/health/components'
+import { getHealth, useHealth } from '@/features/health/api'
 
 // 디자인 시스템
 import { Button } from '@repo/ui/button'
 
+// 앱 전용 위젯
+import { BackLink } from '@/components'
+
 // 로깅
 import { logger } from '@/lib/logger'
-// console.log(...)                              // ❌
+// console.log(...)                              // ❌ ('warn'/'error'만 허용)
 ```

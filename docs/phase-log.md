@@ -131,6 +131,48 @@
 - **import-x v4 resolver**: 최소 한 번은 명시적으로 `eslint-import-resolver-typescript` 설정. 이 패턴을 react-vite에도 동일하게 적용
 - **FSD import zone 규약**: feature가 늘어날 때마다 `eslint.config.js`에 한 줄 추가 필요. 자동화하려면 동적 zone 생성 (예: `fs.readdirSync('./src/features')`)도 가능하지만 명시적 enumerate가 lint 룰 안정성 면에서 안전
 
+### 이터레이션 (코드 리뷰 + 리팩토링 라운드)
+
+초기 commit 이후 사용자 피드백으로 반복 개선. 결정 사항:
+
+| 항목                                                                   | 결정                                                                                 | 이유                                                                                              |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| 페이지 try/catch 제거 → throw + `error.tsx` 위임                       | page.tsx가 직접 try/catch하지 않고 그냥 await. 실패는 segment의 `error.tsx`가 catch  | 현업 표준. page는 얇은 컨테이너, 에러 핸들링은 boundary 책임                                      |
+| 데이터 fetcher를 `features/<n>/api/get-<n>.ts`로 분리                  | page.tsx가 fetch를 직접 호출 안 함                                                   | "page = features 조립만" 원칙. 다른 페이지/layout에서 재사용 가능                                 |
+| `React.cache()` wrap 제거                                              | `getHealth = () => exampleApi.request(...)`만                                        | 한 곳에서만 호출하면 dedup 의미 없음. 여러 컴포넌트가 부르게 되면 그때 추가 (관례 아님)           |
+| SSR streaming은 **async Server Component**로 (`use()` Client bridge X) | `<StatsPanelAsync promise={getStats()} />` + Suspense                                | `use()` + Client bridge는 함수 children RSC 직렬화 못 함. async SC가 더 단순하고 표준             |
+| `use()` 데모는 일반 페이지에 안 넣음                                   | 데이터 페칭에 `use()`는 실무 anti-pattern. React Query/`useSuspenseQuery`가 표준     | `use()` 진짜 use case는 Context 조건부 read 정도. 데모로 일반화하면 오해                          |
+| CSR도 Section 패턴 — page는 Server, 데이터 부분만 Client               | `HealthSection` ('use client') + `useQuery` + early-return 분기. page는 thin wrapper | 'use client' 범위를 leaf로 좁힘. SSR과 일관 (page = 조립만)                                       |
+| Hook은 view-model 변환 X — 데이터/상태만 반환                          | `useHealth()`는 `useQuery` 결과 그대로                                               | 컴포넌트가 표시 분기 책임. 훅이 props 모양 반환하면 재사용성 ↓                                    |
+| 컴포넌트 폴더 컨벤션 = `<name>/<name>.tsx + index.ts`                  | inner barrel + outer barrel 둘 다                                                    | @repo/ui (`button/button.tsx`)와 통일. 외부 import 짧게 (`from '@/features/.../components'`)      |
+| api/도 barrel (`features/<n>/api/index.ts`)                            | server + client 함수를 같은 barrel에                                                 | 외부 import 통일. 단, vitest는 'server-only' 차단되므로 mock 필수                                 |
+| `vi.mock('server-only', () => ({}))` in `vitest.setup.ts`              | api 배럴이 server+client 같이 export하는 구조 호환                                   | vitest는 Next의 tree-shake가 없어 'server-only' 모듈도 같이 로드 → throw                          |
+| `<main>` inline style 제거 → `.page-container` 글로벌 클래스           | `globals.scss`에 정의                                                                | 페이지마다 같은 inline style 중복 제거                                                            |
+| MSW handler URL을 wildcard (`*/api/health`)                            | baseUrl 변화에 영향 안 받음                                                          | 환경별로 baseUrl이 달라도 동일 핸들러 매치                                                        |
+| `health-section.test.tsx` 통합 테스트 추가                             | MSW + RQ + Suspense 분기 (성공/HTTP 5xx/네트워크 실패)                               | 통합 시나리오 커버. 다른 Section 추가 시 같은 패턴 적용                                           |
+| `optimizePackageImports: ['@repo/ui', '@repo/api-client']`             | `next.config.js`                                                                     | barrel을 빌드 타임에 직접 파일 경로로 재작성 — 'use client' 경계 가로지를 때 트리 셰이킹 정확도 ↑ |
+| `package.json`에 `sideEffects: ["**/*.css", "**/*.scss"]`              | JS 모듈은 side-effect-free 가정                                                      | webpack 보수적 tree-shake 회피                                                                    |
+| `ReactQueryDevtools` 활성화                                            | `providers.tsx`에서 `env.NEXT_PUBLIC_APP_ENV !== 'production'` 분기                  | dev에서 RQ 디버깅 표준. 동시에 NEXT_PUBLIC_APP_ENV 사용처 만들어 미사용 변수 해소                 |
+| skeleton 애니메이션 (`pulse` 키프레임)                                 | globals.scss에 정의, stats-panel `.loading`에 적용                                   | 정적 placeholder 대신 시각적 로딩 피드백                                                          |
+| `BackLink` 공통 컴포넌트 (`src/components/back-link/`)                 | hover 시 화살표 마이크로 인터랙션, focus-visible outline                             | 페이지 3곳에서 반복되던 `<Link href="/">← 홈</Link>` 추출                                         |
+| Stats 변형은 같은 파일에 (`StatsPanel` + `StatsPanelAsync`)            | `health-section`은 분기 무거워 별도 폴더                                             | 컴포넌트 무게에 따라 — 단순 변형은 co-locate, 분기 로직 두꺼우면 분리                             |
+
+### 컨벤션 회고 (이 단계에서 확립)
+
+- **컴포넌트 폴더 = `<name>/<name>.tsx + index.ts` (+ scss/scss.d.ts/test)** — 모든 컴포넌트(앱/패키지) 통일. inner barrel은 외부 import를 짧게, 자기 폴더 내 import는 직접 파일
+- **데이터 페칭 분리 = `features/<n>/api/{get-<n>.ts ('server-only'), use-<n>.ts ('use client')}` + barrel** — server/client 두 함수를 같은 barrel로 노출 (vitest 호환은 setup mock으로)
+- **Page는 fetcher만 호출, 분기 책임은 Section/error.tsx에 위임** — page.tsx는 진짜 thin
+- **streaming SSR = async Server Component + Suspense + Promise prop** — `use()` 안 씀. 함수가 RSC 직렬화 못 하므로 render-prop 안 됨
+- **모든 라우트에 error.tsx + loading.tsx 동반 검토** — Next App Router 표준 컨벤션
+
+### Phase 5/6에서 추가로 적용할 것 (Phase 4에서 안 한 것)
+
+- `apps/nextjs`에는 미적용 (의도적):
+  - 통합 테스트 — `health-section`만 있음. `stats-panel-async` (async SC) 테스트 미작성
+  - logger의 외부 transport 추상화 (Sentry/Datadog 등) — 데모 단계에선 console-only
+  - `/login` stub 페이지 — `client.ts`의 `onUnauthorized`가 redirect하는 경로지만 미구현
+  - Bundle analyzer (`@next/bundle-analyzer`) — Next 16의 turbopack과 webpack 분리 이슈로 일단 제외
+
 ---
 
 ## 구현 패턴 회고

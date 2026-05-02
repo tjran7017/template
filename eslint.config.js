@@ -64,6 +64,11 @@ export default [
               from: './apps/nextjs/src/features',
               except: ['./health'],
             },
+            {
+              target: './apps/nextjs/src/features/stats',
+              from: './apps/nextjs/src/features',
+              except: ['./stats'],
+            },
           ],
         },
       ],

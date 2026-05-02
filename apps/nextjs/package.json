@@ -12,6 +12,10 @@
     "test": "vitest run",
     "test:watch": "vitest"
   },
+  "sideEffects": [
+    "**/*.css",
+    "**/*.scss"
+  ],
   "dependencies": {
     "@repo/api-client": "workspace:*",
     "@repo/ui": "workspace:*",
