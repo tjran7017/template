@@ -39,7 +39,6 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.0",
-    "eslint-import-resolver-typescript": "^4.4.4",
     "jsdom": "^25.0.0",
     "msw": "^2.6.0",
     "rollup-plugin-visualizer": "^5.12.0",

@@ -20,6 +20,7 @@
   "devDependencies": {
     "@commitlint/cli": "^19.6.0",
     "@commitlint/config-conventional": "^19.6.0",
+    "@commitlint/types": "^19.5.0",
     "@repo/config": "workspace:*",
     "eslint": "^9.0.0",
     "eslint-import-resolver-typescript": "^4.4.4",
