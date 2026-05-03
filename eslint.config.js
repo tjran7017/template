@@ -2,6 +2,7 @@ import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescrip
 
 import baseConfig from '@repo/config/eslint/base'
 import nextConfig from '@repo/config/eslint/next'
+import viteReactConfig from '@repo/config/eslint/vite-react'
 
 export default [
   {
@@ -16,6 +17,8 @@ export default [
       'packages/config/prettier/**',
       // Storybook 설정 파일은 자체 타입 의존성이라 lint 대상에서 제외
       '**/.storybook/**',
+      // MSW가 생성한 service worker — vendored asset, lint 대상 X
+      '**/public/mockServiceWorker.js',
     ],
   },
   ...baseConfig,
@@ -132,6 +135,95 @@ export default [
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-argument': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
+    },
+  },
+  // apps/react-vite — Vite + React + import resolver + FSD zone
+  ...viteReactConfig.map((cfg) => ({
+    ...cfg,
+    files: ['apps/react-vite/**/*.{ts,tsx}'],
+  })),
+  {
+    files: ['apps/react-vite/**/*.{ts,tsx}'],
+    languageOptions: {
+      parserOptions: {
+        projectService: {
+          allowDefaultProject: ['*.js', '*.mjs', '*.cjs'],
+        },
+        tsconfigRootDir: new URL('./apps/react-vite', import.meta.url).pathname,
+      },
+    },
+    settings: {
+      'import-x/resolver-next': [
+        createTypeScriptImportResolver({
+          project: './apps/react-vite/tsconfig.json',
+        }),
+      ],
+    },
+    rules: {
+      'import/no-restricted-paths': [
+        'error',
+        {
+          zones: [
+            // shared modules은 features/app을 참조하지 않음
+            {
+              target: [
+                './apps/react-vite/src/components',
+                './apps/react-vite/src/hooks',
+                './apps/react-vite/src/lib',
+                './apps/react-vite/src/stores',
+                './apps/react-vite/src/utils',
+              ],
+              from: ['./apps/react-vite/src/features', './apps/react-vite/src/app'],
+            },
+            // 각 feature는 자기 폴더 외 다른 feature를 import할 수 없음
+            // (feature 추가 시 한 줄 추가)
+            {
+              target: './apps/react-vite/src/features/health',
+              from: './apps/react-vite/src/features',
+              except: ['./health'],
+            },
+            {
+              target: './apps/react-vite/src/features/order',
+              from: './apps/react-vite/src/features',
+              except: ['./order'],
+            },
+            {
+              target: './apps/react-vite/src/features/orders',
+              from: './apps/react-vite/src/features',
+              except: ['./orders'],
+            },
+          ],
+        },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            "MemberExpression[object.type='MetaProperty'][object.meta.name='import'][object.property.name='meta'][property.name='env']",
+          message: 'src/config/env.ts의 env 객체를 사용하세요.',
+        },
+      ],
+    },
+  },
+  {
+    // env.ts는 import.meta.env를 읽는 유일한 진입점
+    files: ['apps/react-vite/src/config/env.ts'],
+    rules: {
+      'no-restricted-syntax': 'off',
+    },
+  },
+  {
+    // logger는 import.meta.env.DEV로 dev 분기 (env 객체 의존하면 순환)
+    files: ['apps/react-vite/src/lib/logger.ts'],
+    rules: {
+      'no-restricted-syntax': 'off',
+    },
+  },
+  {
+    // 테스트 setup — import.meta.env stub
+    files: ['apps/react-vite/vitest.setup.ts'],
+    rules: {
+      'no-restricted-syntax': 'off',
     },
   },
 ]

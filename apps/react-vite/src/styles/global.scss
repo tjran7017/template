@@ -1,0 +1,33 @@
+@use '@repo/ui/reset.css';
+@use '@repo/ui/tokens.css';
+@use '@repo/ui/theme.css';
+
+html,
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+}
+
+#root,
+main {
+  min-height: 100dvh;
+}
+
+.page-container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--spacing-6);
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}

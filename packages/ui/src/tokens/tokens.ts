@@ -9,6 +9,8 @@ export const tokens = {
     primarySubtle: 'var(--color-primary-subtle)',
     danger: 'var(--color-danger)',
     dangerHover: 'var(--color-danger-hover)',
+    success: 'var(--color-success)',
+    successHover: 'var(--color-success-hover)',
     border: 'var(--color-border)',
     surface: 'var(--color-surface)',
   },

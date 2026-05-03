@@ -79,7 +79,7 @@ packages/ui/
 
 [`src/tokens/tokens.css`](./src/tokens/tokens.css) 참조. 카테고리:
 
-- `--color-*` (bg, fg, fg-muted, primary, primary-hover, primary-subtle, danger, danger-hover, border, surface)
+- `--color-*` (bg, fg, fg-muted, primary, primary-hover, primary-subtle, danger, danger-hover, success, success-hover, border, surface)
 - `--shadow-*` (sm, md)
 - `--font-*` (sans, size-xs/sm/base/lg, weight-medium/semibold, line-height-tight/normal)
 - `--spacing-*` (1~6)
