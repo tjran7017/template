@@ -1,8 +1,16 @@
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
 import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescript'
 
-import baseConfig from '@repo/config/eslint/base'
+import baseConfig, { importPlugin } from '@repo/config/eslint/base'
 import nextConfig from '@repo/config/eslint/next'
 import viteReactConfig from '@repo/config/eslint/vite-react'
+
+// zone 경로는 절대경로로 — `pnpm --filter=<n> lint`가 앱 cwd에서 실행돼도 일관 매칭
+const repoRoot = path.dirname(fileURLToPath(import.meta.url))
+const nextSrc = path.join(repoRoot, 'apps/nextjs/src')
+const viteSrc = path.join(repoRoot, 'apps/react-vite/src')
 
 export default [
   {
@@ -52,24 +60,24 @@ export default [
             // shared modules은 features/app을 참조하지 않음
             {
               target: [
-                './apps/nextjs/src/components',
-                './apps/nextjs/src/hooks',
-                './apps/nextjs/src/lib',
-                './apps/nextjs/src/stores',
-                './apps/nextjs/src/utils',
+                path.join(nextSrc, 'components'),
+                path.join(nextSrc, 'hooks'),
+                path.join(nextSrc, 'lib'),
+                path.join(nextSrc, 'stores'),
+                path.join(nextSrc, 'utils'),
               ],
-              from: ['./apps/nextjs/src/features', './apps/nextjs/src/app'],
+              from: [path.join(nextSrc, 'features'), path.join(nextSrc, 'app')],
             },
             // 각 feature는 자기 폴더 외 다른 feature를 import할 수 없음
             // (feature 추가 시 한 줄 추가)
             {
-              target: './apps/nextjs/src/features/health',
-              from: './apps/nextjs/src/features',
+              target: path.join(nextSrc, 'features/health'),
+              from: path.join(nextSrc, 'features'),
               except: ['./health'],
             },
             {
-              target: './apps/nextjs/src/features/stats',
-              from: './apps/nextjs/src/features',
+              target: path.join(nextSrc, 'features/stats'),
+              from: path.join(nextSrc, 'features'),
               except: ['./stats'],
             },
           ],
@@ -144,6 +152,10 @@ export default [
   })),
   {
     files: ['apps/react-vite/**/*.{ts,tsx}'],
+    plugins: {
+      // flat config — rules block에서 plugin namespace 룰을 쓰려면 같은 config 객체에 등록 필요
+      import: importPlugin,
+    },
     languageOptions: {
       parserOptions: {
         projectService: {
@@ -167,30 +179,25 @@ export default [
             // shared modules은 features/app을 참조하지 않음
             {
               target: [
-                './apps/react-vite/src/components',
-                './apps/react-vite/src/hooks',
-                './apps/react-vite/src/lib',
-                './apps/react-vite/src/stores',
-                './apps/react-vite/src/utils',
+                path.join(viteSrc, 'components'),
+                path.join(viteSrc, 'hooks'),
+                path.join(viteSrc, 'lib'),
+                path.join(viteSrc, 'stores'),
+                path.join(viteSrc, 'utils'),
               ],
-              from: ['./apps/react-vite/src/features', './apps/react-vite/src/app'],
+              from: [path.join(viteSrc, 'features'), path.join(viteSrc, 'app')],
             },
             // 각 feature는 자기 폴더 외 다른 feature를 import할 수 없음
             // (feature 추가 시 한 줄 추가)
             {
-              target: './apps/react-vite/src/features/health',
-              from: './apps/react-vite/src/features',
+              target: path.join(viteSrc, 'features/health'),
+              from: path.join(viteSrc, 'features'),
               except: ['./health'],
             },
             {
-              target: './apps/react-vite/src/features/order',
-              from: './apps/react-vite/src/features',
+              target: path.join(viteSrc, 'features/order'),
+              from: path.join(viteSrc, 'features'),
               except: ['./order'],
-            },
-            {
-              target: './apps/react-vite/src/features/orders',
-              from: './apps/react-vite/src/features',
-              except: ['./orders'],
             },
           ],
         },
