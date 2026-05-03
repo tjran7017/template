@@ -175,6 +175,154 @@
 
 ---
 
+## Phase 5 — 완료 ✅
+
+**브랜치**: `feat/phase-5-react-vite`
+**선행 조건**: Phase 1, 2, 3 완료 후 진입 (Phase 4와 병렬 가능 — 본 작업은 Phase 4 머지 후 순차 진행)
+
+### 결정 사항
+
+| 항목                                     | 결정                                                                                   | 이유                                                                                                                     |
+| ---------------------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| 컴포넌트 폴더 컨벤션                     | `apps/nextjs`와 통일 (`<name>/<name>.tsx + index.ts` + outer barrel)                   | 두 앱 통일 — react-vite/CLAUDE.md 초안의 "배럴 안 씀" 규약은 폐기. Vite도 트리 셰이킹 OK                                 |
+| 데모 페이지 범위                         | `/` (홈) + `/health` (CSR + useQuery) + `/*` (NotFound) — 한 도메인                    | SPA에 SSR/streaming 패턴 시연이 의미 없음. CSR 분기 한 패턴이 핵심                                                       |
+| Storybook                                | 추가 안 함                                                                             | `@repo/ui`에서 이미 커버 — 앱 자체 스토리북 중복                                                                         |
+| MSW dev 활성화                           | `msw/browser` `setupWorker` + `main.tsx`에서 dev 분기                                  | SPA는 자체 BFF가 없음. 백엔드 placeholder URL이라 dev에서 fetch 실패 → MSW worker가 가로채야 데모 동작                   |
+| MSW handlers 공유                        | `mocks/handlers.ts` 단일 파일 → `server.ts`(node)와 `browser.ts`(worker) 양쪽이 import | 응답 시나리오를 한 곳에서 정의 — 테스트와 dev 데모가 같은 mock 사용                                                      |
+| `public/mockServiceWorker.js` 커밋       | `pnpm exec msw init public/`로 한 번 생성 후 커밋                                      | gitignore하면 신규 클론 시 dev 데모가 깨짐. 생성물이지만 안정                                                            |
+| MSW worker 부트 실패 시 fail-soft        | `try/catch` + `logger.warn`                                                            | 워커 파일 누락 / 프로덕션 기동 분기 — `enableMocking()` 실패해도 앱은 마운트                                             |
+| 라우트 lazy 패턴                         | `lazy(() => import('./routes/x').then(m => ({ default: m.XRoute })))`                  | 라우트 컴포넌트는 named export(파일별 명시적 이름) — default export 강제 회피 + lazy chunk 분리                          |
+| `<Suspense>` 위치                        | `app.tsx`의 `<RouterProvider>` 바깥                                                    | 라우트 lazy 전환 시 fallback. 라우트별 fallback이 필요해지면 route 정의에 `loader/HydrateFallback` 추가                  |
+| `errorElement` 위치                      | 루트 라우트(`/`)에만 우선 적용                                                         | 페이지별로 boundary가 필요해지면 자식 route에 추가. 라우트 단위 격리 가능                                                |
+| `import.meta.env` 강제                   | `no-restricted-syntax` (selector로 `MetaProperty + member 'env'` 매치)                 | `no-restricted-properties`는 `import.meta` 같은 `MetaProperty`에 안 통함 — selector가 유일한 길                          |
+| `ImportMetaEnv` augment 필수             | `src/vite-env.d.ts` 수동 작성                                                          | vite/client 기본 타입은 unknown VITE\_ 변수에 `any` 반환 → `no-unsafe-assignment` 발생. zod 입력은 명시 string 타입 필요 |
+| `tsconfig.json` `types: ["vite/client"]` | 명시                                                                                   | 기본 `@types/*` 자동 포함 끄고 vite 타입만. node 타입 새는 것 회피                                                       |
+| `vitest.setup.ts`의 env stub 캐스트      | `import.meta.env as Record<string, string \| undefined>`                               | `ImportMetaEnv` 모든 속성이 readonly로 augment돼 직접 할당 불가. mutable 캐스트로 우회                                   |
+| 빌드 스크립트                            | `tsc -b --noEmit && vite build`                                                        | tsc는 strict 검증, vite는 번들. 두 단계 분리로 타입 에러를 빌드 실패로 즉시 인지                                         |
+| `vite.config.ts` `manualChunks`          | `react`, `router`, `query`로 분리                                                      | 초기 번들 캐시 안정성. 앱 코드 변경 시 vendor chunk hash 유지                                                            |
+| `analyze` 스크립트                       | `ANALYZE=1 vite build` + `rollup-plugin-visualizer`                                    | env 플래그로 활성화 — 일반 빌드 영향 X. `dist/stats.html` 자동 open                                                      |
+| `transpilePackages` 명시 안 함           | Vite는 워크스페이스 소스를 자동 처리                                                   | Next의 `transpilePackages`는 webpack 한정. Vite + esbuild는 모노레포 alias만으로 동작                                    |
+| `react-router-dom` 안 씀                 | `react-router` 단일 import                                                             | v7부터 `react-router-dom`은 폐기 — 단일 패키지로 통합                                                                    |
+| `BackLink`의 `href` prop                 | `string` 타입 (Next는 `ComponentProps<typeof Link>['href']`)                           | react-router의 `Link`는 `to: To` (string \| Path 객체)지만 데모용은 string으로 충분                                      |
+
+### 인수인계 메모
+
+- **MSW worker 파일은 `public/`에 커밋된 정적 파일** — `pnpm exec msw init public/` 실행 시 `package.json`에 `msw.workerDirectory` 필드 자동 추가 (이건 `msw upgrade` 시 재생성을 위한 메타데이터)
+- **dev에서 SPA fallback이 `/api/*`도 가로채는 문제** — `curl http://localhost:5173/api/health`는 Vite의 SPA fallback이라 `index.html` 응답. MSW worker는 브라우저 컨텍스트에서만 동작 → 실 브라우저 테스트 필요
+- **React Router 7 `lazy` 패턴**: named export를 default로 변환하는 wrapper가 필수 (`then(m => ({ default: m.HealthRoute }))`) — default export 강제하지 않으면서 lazy 가능
+- **`ImportMetaEnv` augment 위치**: `src/vite-env.d.ts` (vite 표준). `tsconfig.json`의 `include`에 `src`가 들어가면 자동 인식
+- **테스트 setup의 mutable cast 패턴**은 readonly 강제와 stub 필요성을 모두 만족하는 표준 트릭 — Phase 4의 `vitest.setup.ts`에서 `process.env`를 직접 할당하던 것과 다름 (Node 환경은 `process.env`가 mutable, Vite는 readonly augment)
+- **`@types/node` 25 transitive 충돌**은 Phase 4의 `pnpm.overrides`로 이미 해결 — Phase 5에서 추가 설정 불필요
+
+### 컨벤션 회고 (이 단계에서 확립 / 강화)
+
+- **두 앱이 같은 폴더 컨벤션** — Phase 4의 `<name>/<name>.tsx + index.ts` 패턴이 Vite에서도 동작 (트리 셰이킹 영향 없음). 향후 새 앱도 동일 패턴
+- **MSW handlers 단일 파일이 server + browser 둘 다 공급** — Phase 4는 `msw/node`만, Phase 5에서 `msw/browser` 추가. 양쪽이 같은 mock 정의를 공유하는 구조
+- **`@repo/api-client` 통합 패턴**이 Next/Vite 모두 동일 — `lib/api-client.{ts|server.ts|client.ts}`에서 인스턴스 생성, lazy `getAuthToken` getter
+
+### 이터레이션 — SPA 관점 리팩토링 라운드
+
+초기 commit은 nextjs 패턴을 일대일로 이식했으나, "SPA 답지 않다"는 리뷰 후 다음을 수정. **Server Component 모델 산물인 indirection 제거**가 핵심:
+
+| 항목                              | Before (nextjs 이식)                                                                                         | After (SPA idiomatic)                                                                                                            | 이유                                                                                                                                                      |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 데이터 페칭 레이어                | `HealthRoute` → `HealthSection` ('use client' + useQuery + 분기) → `HealthStatus` (presentational) — 3 layer | `HealthRoute` (Component)가 직접 useHealth + 분기 → `HealthStatus` 매핑 — 2 layer                                                | SPA에는 'use client' 경계가 없어 Section이 indirection만 됨                                                                                               |
+| `features/<n>/api/` 폴더 + barrel | `api/{get-x.ts, use-x.ts, index.ts}` (nextjs)                                                                | `features/<n>/queries.ts` 단일 파일 (배럴 X) — _후속 "구조 정착 라운드"에서 `api/{queries,mutations}.ts + index.ts`로 다시 묶음_ | server/client 분리 대신 read/write 분리. SPA는 둘 다 client라 두 파일이면 충분                                                                            |
+| route 컴포넌트 export             | `lazy(() => import('./routes/x').then(m => ({ default: m.XRoute })))` wrapper × 라우트 수                    | `Component` named export + `lazy: () => import('./routes/x')` (route-level lazy)                                                 | react-router 7 표준. 보일러플레이트 제거 + `loader`/`ErrorBoundary`도 같은 모듈에서 export 가능                                                           |
+| `<Suspense>`                      | `app.tsx`의 `<RouterProvider>` 바깥에 wrap (React.lazy 호환용)                                               | 제거 — react-router 7 route-level lazy가 자체 처리                                                                               | route lazy는 React Suspense를 throw하지 않음. 외부 Suspense 불필요                                                                                        |
+| `HealthStatusProps`               | discriminated union (`'loading' \| 'ok' \| 'fail'`)                                                          | `{ label: string; tone?: 'ok' \| 'fail' }`                                                                                       | Next 데모는 streaming SSR 시 같은 컴포넌트가 loading/data 둘 다라 union이 의미 — SPA는 useQuery 분기가 라우트에 있어 컴포넌트는 (tone, label)만 받으면 됨 |
+| MSW dev 활성화                    | `import.meta.env.DEV`이면 항상 worker.start                                                                  | `env.VITE_USE_MOCK === '1'`일 때만                                                                                               | 실 백엔드 붙일 때 main.tsx 수정 없이 `.env.local` 한 줄로 끔. production에서도 worker chunk가 dynamic import + 분기로 미로드                              |
+| `ErrorBoundary` 위치              | `RootErrorBoundary`를 `errorElement`에 직접 element로 전달                                                   | route 모듈에서 `ErrorBoundary` named export → 부모 route가 `lazy: () => import('./routes/root-error-boundary')`로 흡수           | route-level lazy 패턴과 일관 — 모든 라우트 모듈이 같은 export 형태                                                                                        |
+| 통합 테스트 위치                  | `features/health/components/health-section/health-section.test.tsx`                                          | `app/routes/health.test.tsx` (`MemoryRouter` wrap)                                                                               | Section 제거에 따라. 통합 시나리오는 라우트 단위로 검증                                                                                                   |
+| 컴포넌트 폴더 + inner barrel      | 유지 (`<name>/index.ts` + outer barrel)                                                                      | **유지** (사용자 결정 — SPA에서도 일관성 우선)                                                                                   | nextjs와 통일. 트리 셰이킹 영향 X                                                                                                                         |
+
+#### SPA가 nextjs와 의도적으로 다른 부분 (정착)
+
+- **page = thin container 원칙 안 강제**: nextjs는 RSC 경계 때문에 page.tsx가 얇아야 하지만, SPA의 라우트 컴포넌트는 데이터 페칭/분기를 직접 — 재사용이 정말 필요할 때만 추출
+- **features는 평평**: `queries.ts` 단일 파일. 여러 query/mutation이 늘면 도메인별로 추가 파일 (e.g. `mutations.ts`) 그래도 폴더는 여전히 X
+- **`Section` 명명 안 씀**: `<HealthCard>`, `<HealthView>`, `<HealthPanel>` 같은 view-역할 명명 사용. `Section`은 nextjs의 'use client' 경계를 가리키는 잔재
+- **discriminated union props 보수적**: 단순 데이터 표시는 그냥 props (`label + tone`). 진짜 상태 머신(예: stepper, wizard)에서만 union
+
+### 이터레이션 — useSuspenseQuery + 라우트 boundary 위임 라운드
+
+이전 라운드는 라우트가 `useQuery` + 분기 + mapping을 직접 했지만, **데모 코드 + 분기 책임 분산** 문제로 다시 리뷰 → SPA 표준 패턴(`useSuspenseQuery` + 라우트 boundary)으로 재정착:
+
+| 항목                      | Before (early return + mapping)                                                     | After (suspense + boundary)                                                           | 이유                                                                                                   |
+| ------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `useHealth`               | `useQuery` (`{ data?, isLoading, error }`)                                          | `useSuspenseQuery` (`{ data }` 항상 정의)                                             | suspense가 표준 — loading/error 분기 책임을 인프라(Suspense, ErrorBoundary)로 위임                     |
+| `health.tsx` 본문         | `toDisplay(useHealth())` 헬퍼 + `(tone, label)` 매핑                                | `const { data } = useHealth()` happy path만                                           | 분기 코드 0줄. 페이지가 의미 있는 컨텐츠만 표현                                                        |
+| 로딩 표시                 | 인라인 텍스트 ("확인 중…") + 같은 컴포넌트가 분기 별 다른 모양                      | `root.tsx`의 `<Suspense fallback>` (전역 fallback)                                    | 라우트 단위 통일된 로딩 UX, 페이지 코드 단순화                                                         |
+| 에러 표시                 | 인라인 (`HealthStatus tone="fail"`)                                                 | `root.tsx`의 `ErrorBoundary` (`useRouteError()`로 메시지 표시)                        | 라우트별 에러 격리, 사용자 친화 폴백 UI 한 곳                                                          |
+| `root-error-boundary.tsx` | only `ErrorBoundary` export                                                         | `root.tsx`로 rename + `Component` (`<Suspense><Outlet /></Suspense>`) 추가            | 루트 라우트 모듈에 layout + error boundary 둘 다. 의미상 "root"가 더 정확                              |
+| `HealthStatusTone` import | 라우트가 컴포넌트 내부 타입에 의존                                                  | outer barrel에서 노출 제거 (컴포넌트 내부 타입)                                       | 라우트는 도메인 데이터(`string`, `boolean`)만 컴포넌트에 전달 — 결합도 ↓                               |
+| 라우트 함수 export        | `export function HealthPage()` (직접 export) + `export { HealthPage as Component }` | `function HealthPage()` (named declaration) + `export { HealthPage as Component }` 만 | named declaration이 스택트레이스/DevTools 이름 보존 — `export` 중복은 외부 노출 표면만 늘림            |
+| 통합 테스트               | `MemoryRouter` + 라우트 컴포넌트 직접 마운트                                        | `createMemoryRouter`에 root.tsx + 라우트 둘 다 lazy 등록 + `RouterProvider`           | 실 production 라우터 wiring(Suspense+ErrorBoundary)까지 통합 검증. 에러 케이스가 실제 폴백 UI로 검증됨 |
+| 에러 테스트 assertion     | 인라인 에러 텍스트 (`HTTP 503`, `연결 실패`)                                        | 루트 ErrorBoundary 헤딩 (`문제가 발생했어요`)                                         | UI 책임 일치 — 페이지 자체에 에러 분기 없으므로 폴백 UI 검증                                           |
+
+#### 트레이드오프
+
+- **장점**: 페이지 본문 50% 축소, loading/error 분기 책임이 인프라로, mutation 외 모든 페이지가 같은 패턴, 통합 테스트가 production 인프라까지 검증
+- **단점**: route boundary 인프라가 _반드시_ 있어야 함. 새 라우트 추가 시 root.tsx의 Suspense/ErrorBoundary가 자동 적용되지만, 도메인별 격리가 필요하면 자식 라우트에 자체 boundary 추가 필요
+- **`useSuspenseQuery` 안 쓰는 케이스**: 데이터가 옵션 (있으면 보너스), 인터랙션 후 fetch (검색 입력 등) — 이 둘은 일반 `useQuery` 유지
+
+### 데모 확장 — orders 도메인 (목록 + 폼)
+
+react-vite가 `/health` 한 페이지뿐이라 SPA 핵심 패턴 일부만 시연 → **주문 도메인** 2 페이지 추가:
+
+| 항목                                    | 내용                                                                                                                                                                  |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/orders`                               | `useSuspenseQuery`로 주문 목록 조회. `OrderList` presentational 컴포넌트가 렌더                                                                                       |
+| `/orders/new`                           | `react-hook-form + zodResolver` 폼 + `useMutation` 제출. 성공 시 `invalidateQueries` + `navigate('/orders')`                                                          |
+| `features/order/api/queries.ts`         | `useOrders` (suspense) + `orderKeys` 팩토리                                                                                                                           |
+| `features/order/api/mutations.ts`       | `useCreateOrder` — `mutationFn` + `onSuccess`에서 list invalidate                                                                                                     |
+| `features/order/components/order-list/` | presentational 리스트 (빈 상태 + 행 렌더). Intl.DateTimeFormat으로 한국어 날짜                                                                                        |
+| `features/order/components/order-form/` | `react-hook-form + zodResolver` + `useCreateOrder` 통합. 라우트는 `<OrderForm onSuccess={() => navigate('/orders')} />` 한 줄. 폼 검증/제출/에러 표시는 컴포넌트 내부 |
+| MSW handlers                            | in-memory `orders[]` + `nextId`. `resetOrders()` 헬퍼 export → 테스트 `beforeEach`에서 초기화                                                                         |
+| api-client `services/example.ts`        | `/orders` GET/POST 타입 inline 추가 (데모 서비스 확장)                                                                                                                |
+| 통합 테스트                             | `routes/order/list/list.test.tsx` — 목록 표시 + ErrorBoundary 캐치 (2건). `createMemoryRouter` + root.tsx 합성                                                        |
+| 의존성 추가                             | `@hookform/resolvers` (zod ↔ react-hook-form 연결, 표준 패턴)                                                                                                         |
+
+#### 패턴 정착
+
+- **`features/<n>/{queries,mutations}.ts` 분리** — read와 write를 다른 파일로. 같은 도메인이라 `orderKeys`는 `queries.ts`에 두고 mutations에서 import (cross-file 같은 폴더, 직접 경로)
+- **mutation 후 `invalidateQueries` 패턴** — 옵티미스틱 업데이트 안 할 때 가장 단순. 옵티미스틱은 `onMutate` + `setQueryData` 추가
+- **폼 = react-hook-form + zod + useMutation 조합** — submit 핸들러는 `handleSubmit((values) => mutate(values, { onSuccess: navigate }))`. 단순.
+- **`<form onSubmit={(e) => void onSubmit(e)}>` 패턴** — `handleSubmit`이 Promise<void>를 반환해 `no-misused-promises` 룰에 걸림. `void` 캐스트가 표준 회피
+- **MSW in-memory 상태 + `resetOrders()` 헬퍼** — POST 핸들러가 mutate한 상태를 다음 테스트에서 격리하기 위해. `beforeEach(resetOrders)`
+
+### 이터레이션 — 구조 정착 라운드
+
+데모 확장(orders) 직후 _명명·폴더·import 표면을 한 번에 정리_. 이 라운드의 결정으로 react-vite 구조가 최종 형태로 굳어짐:
+
+| 항목                                     | Before                                                      | After                                                                                    | 이유                                                                                                                    |
+| ---------------------------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| 라우트 함수명                            | `Component` (export 이름과 동일)                            | `HealthStatusPage` / `HomePage` 등 명시 함수명 + `export { XxxPage as Component }` alias | 스택 트레이스/DevTools 가독성 — `Component` 단독은 의미 없음                                                            |
+| 라우트 export 표면                       | `export function HealthPage` (직접 export)                  | `function HealthPage` (named declaration, export X) + alias만 노출                       | 외부 진입점은 `Component` 하나로 단일화                                                                                 |
+| `routes/<n>/index.ts` 배럴               | health/orders 각 폴더에 barrel                              | **제거** — router가 view 파일을 직접 lazy import                                         | 외부 import 표면이 router.tsx 한 곳뿐이라 barrel 가치 X                                                                 |
+| view 파일명                              | `health/health.tsx`, `orders/orders.tsx` (folder/file 동일) | `health/status/status.tsx`, `order/list/list.tsx` 등 view 명시                           | 한 도메인에 view 여러 개 가능해짐 (예: `/health/incidents`)                                                             |
+| 라우트 도메인 폴더                       | `routes/orders/` (plural)                                   | `routes/order/` (singular)                                                               | 도메인 entity = singular 컨벤션 통일 (health도 singular)                                                                |
+| view 폴더                                | view가 단일 파일이면 도메인 폴더 직속 (`health/status.tsx`) | view마다 폴더 (`health/status/{status.tsx, status.test.tsx}`)                            | 테스트/scss 등 보조 파일이 늘어도 일관 — 컴포넌트 컨벤션과 동일                                                         |
+| `features/orders/`                       | plural                                                      | `features/order/` (singular) — 라우트와 통일                                             | health/order 모두 단수, 도메인 entity 명명 일관                                                                         |
+| `features/<n>/` 평면 (Phase 5 초기 결정) | `queries.ts` + `mutations.ts` 평면, barrel 없음             | `features/<n>/api/{index.ts, queries.ts, mutations.ts}` 폴더 + outer barrel              | feature가 커질 때 cross-cut 영역(api / components / hooks 등) 분리 여지 확보. import 진입점도 `@/features/<n>/api` 단일 |
+| 폼 위치                                  | `routes/order/new/new.tsx` 인라인 (~120줄)                  | `features/order/components/order-form/` 컴포넌트 (~85줄) + 라우트는 30줄                 | 라우트 happy-path 원칙과 일관 — mutation hook까지 폼이 캡슐화, 라우트는 `<OrderForm onSuccess={navigate} />`            |
+| `HealthStatusTone` 외부 노출             | `features/health/components/index.ts`에서 re-export         | 제거 (컴포넌트 내부 타입)                                                                | 라우트가 컴포넌트 내부 타입에 의존 X — 결합도 ↓                                                                         |
+
+#### 패턴 정착 (이 라운드 이후 굳어진 컨벤션)
+
+- **라우트 모듈 = `<view>.tsx` 안에 named function + `Component` alias** — 모든 라우트가 같은 export 모양
+- **`routes/<domain>/<view>/<view>.tsx`** — 폴더 깊이는 일정, 파일명만 의미 부여
+- **`features/<domain>/{api,components}/index.ts` outer barrel** — feature는 두 진입점만 노출 (`@/features/<n>/api`, `@/features/<n>/components`)
+- **단수 도메인 명명** — `health`, `order` (URL은 `/orders` plural 유지 — REST collection 의미)
+- **폼 컴포넌트가 mutation hook 소유** — 라우트는 callback (`onSuccess`)만 주입
+- **`api/queries.ts`(useSuspenseQuery)와 `api/mutations.ts`(useMutation) 분리** — read/write가 다른 파일
+  - `react-hook-form` 데모 — 패키지는 설치만 (Phase 6에서 form feature 데모 추가 검토)
+  - `loader` 사용 데모 — React Query만으로 충분한 단순 케이스라 미사용. 페이지 진입 시 prefetch가 필요해지면 `queryClient.prefetchQuery` 패턴 추가
+  - `<ProtectedRoute>` 래퍼 — auth feature가 없어 미구현
+  - 다크모드 토글 — `data-theme` 인프라는 있으나 토글 UI 없음
+  - 가상화 데모 — 큰 리스트 demo가 없어 보류
+
+---
+
 ## 구현 패턴 회고
 
 - **에이전트 worktree 격리 병렬화**는 Phase 2/3에서 효과적 — 다만 첫 시도에 Bash 권한 문제로 한 번 실패. 두 번째 시도에서는 파일 작성만 시키고 Bash 작업은 메인 세션에서 처리하는 분담이 안정적
