@@ -72,11 +72,13 @@
 ### CLAUDE.md 경량화 (Phase 1 완료 후)
 
 `packages/config/CLAUDE.md`에서 제거:
+
 - tsconfig 본문 전체 인용 코드 블록
 - preset별 설정값 예제 코드
 - 장문의 "왜 이 값인가" 설명 (README로 이동)
 
 유지:
+
 - 각 preset이 언제 적합한지 (1-2줄 요약 + 실제 파일 링크)
 - ESLint flat config 호환성 주의사항
 - "변경 시 모든 워크스페이스 빌드 확인" 체크리스트
@@ -112,6 +114,7 @@
 ### CLAUDE.md 경량화 (Phase 2 완료 후)
 
 `packages/api-client/CLAUDE.md`에서 제거:
+
 - `core.ts` 전체 코드 블록
 - `types.ts` 전체 코드 블록
 - `generate.ts` 전체 코드 블록
@@ -119,6 +122,7 @@
 - 장문의 "새 서비스 추가 절차" 단계별 설명
 
 유지:
+
 - 네이밍 규칙 (`*_SWAGGER_URL`, namespace 패턴)
 - 미들웨어 순서 규칙
 - "services/ 파일은 generated/ 타입에만 의존" 의존 방향
@@ -153,12 +157,14 @@
 ### CLAUDE.md 경량화 (Phase 3 완료 후)
 
 `packages/ui/CLAUDE.md`에서 제거:
+
 - `tokens.css` 전체 코드 블록
 - `button.tsx` 전체 코드 블록
 - `button.module.scss` 전체 코드 블록
 - 컴포넌트 추가 절차 장문 설명
 
 유지:
+
 - 디자인 토큰 네이밍 규칙 (`--color-*`, `--spacing-*`)
 - 배럴 파일 사용하지 않는 이유 (subpath export 사용)
 - `cn()` 사용 규칙
@@ -176,7 +182,7 @@
 
 ### 산출물
 
-- `apps/nextjs/package.json` (Next.js 16, React 19, react-query, zustand, react-hook-form, zod, @repo/*)
+- `apps/nextjs/package.json` (Next.js 16, React 19, react-query, zustand, react-hook-form, zod, @repo/\*)
 - `next.config.js`
 - `tsconfig.json` (extends `@repo/config/typescript/next`)
 - `eslint.config.js` (`@repo/config/eslint/next` + import zone 규칙)
@@ -200,12 +206,14 @@
 ### CLAUDE.md 경량화 (Phase 4 완료 후)
 
 `apps/nextjs/CLAUDE.md`에서 제거:
+
 - `env.ts` 전체 코드 블록
 - `api-client/server.ts`, `api-client/client.ts` 전체 코드 블록
 - feature 디렉토리 구조 ASCII tree
 - MSW 셋업 코드 블록
 
 유지:
+
 - 의존 방향 규칙 + ESLint zone 설정 위치
 - `env.ts`가 SSOT인 이유 (1줄)
 - Server Component vs Client Component 경계 규칙
@@ -224,7 +232,7 @@
 
 ### 산출물
 
-- `apps/react-vite/package.json` (Vite 5, React 19, react-router 7, react-query, zustand, react-hook-form, zod, @repo/*)
+- `apps/react-vite/package.json` (Vite 5, React 19, react-router 7, react-query, zustand, react-hook-form, zod, @repo/\*)
 - `vite.config.ts` (alias, chunk split, rollup-plugin-visualizer)
 - `tsconfig.json` (extends `@repo/config/typescript/vite`)
 - `eslint.config.js` (`@repo/config/eslint/vite-react` + import zone)
@@ -248,11 +256,13 @@
 ### CLAUDE.md 경량화 (Phase 5 완료 후)
 
 `apps/react-vite/CLAUDE.md`에서 제거:
+
 - `env.ts`, `router.tsx`, `api-client.ts` 코드 블록
 - feature 구조 ASCII tree
 - MSW 셋업 코드 블록
 
 유지:
+
 - React Router 7 data router 패턴 (왜 loader/action 분리인지)
 - 코드 스플리팅 기준 (lazy 적용 시점)
 - 의존 방향 + ESLint zone 위치
@@ -296,11 +306,13 @@
 ### 루트 CLAUDE.md 경량화 (Phase 6)
 
 제거:
+
 - "새 프로젝트 시작 절차" 장문 설명 (README로 이동)
 - "공통 명령어" 코드 블록 (README로 이동)
 - 각 패키지/앱 상세 설명 (각 하위 CLAUDE.md로 위임)
 
 유지:
+
 - 문서 맵 표 (어떤 CLAUDE.md를 읽어야 하는지)
 - 패키지 의존 규칙 다이어그램
 - 코딩 컨벤션 전역 규칙 (네이밍, import 순서, 커밋 컨벤션)
@@ -324,11 +336,11 @@ Phase 0 ──→ Phase 1 ──┬──→ Phase 2 ─────┬──→
 
 ## 리스크
 
-| 리스크 | 완화 |
-|---|---|
-| Swagger 스펙 없이 api-client 시작 | `src/services/example.ts` + `src/generated/` gitignore, 사용자 스펙 추가 시 절차 README에 명기 |
-| React 19 + Next 16 peer dep 충돌 | 루트 `pnpm.overrides`로 react 19 강제 |
-| ESLint 9 flat config 미호환 플러그인 | Phase 1에서 버전 고정, 미호환 시 `FlatCompat` 우회 |
-| Phase 2/3 병렬 중 `packages/*` 동시 수정 충돌 | Phase 1 완전 안정화 후 진입, 패키지 간 수정 금지 |
-| CLAUDE.md 경량화 시 설계 의도 소실 | 제거 전 code-reviewer로 "코드만 봐도 자명한가" 검토 |
-| MSW 셋업 Next/Vite 차이 | 공통화하지 않음, 동일 패턴 양쪽 적용 후 각 앱 CLAUDE.md에 간단 명기 |
+| 리스크                                        | 완화                                                                                           |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Swagger 스펙 없이 api-client 시작             | `src/services/example.ts` + `src/generated/` gitignore, 사용자 스펙 추가 시 절차 README에 명기 |
+| React 19 + Next 16 peer dep 충돌              | 루트 `pnpm.overrides`로 react 19 강제                                                          |
+| ESLint 9 flat config 미호환 플러그인          | Phase 1에서 버전 고정, 미호환 시 `FlatCompat` 우회                                             |
+| Phase 2/3 병렬 중 `packages/*` 동시 수정 충돌 | Phase 1 완전 안정화 후 진입, 패키지 간 수정 금지                                               |
+| CLAUDE.md 경량화 시 설계 의도 소실            | 제거 전 code-reviewer로 "코드만 봐도 자명한가" 검토                                            |
+| MSW 셋업 Next/Vite 차이                       | 공통화하지 않음, 동일 패턴 양쪽 적용 후 각 앱 CLAUDE.md에 간단 명기                            |
