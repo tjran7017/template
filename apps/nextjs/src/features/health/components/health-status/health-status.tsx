@@ -4,7 +4,7 @@ import styles from './health-status.module.scss'
 
 export type HealthState = 'loading' | 'ok' | 'fail'
 
-type HealthStatusProps = {
+interface HealthStatusProps {
   state: HealthState
   label: string
   prefix?: string

@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 
 import styles from './back-link.module.scss'
 
-type Props = {
+interface Props {
   href: string
   children: ReactNode
 }

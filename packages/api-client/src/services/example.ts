@@ -1,13 +1,13 @@
 import { createServiceClient, type ServiceConfig } from '../core'
 
-type Order = {
+interface Order {
   id: string
   item: string
   quantity: number
   createdAt: string
 }
 
-export type ExamplePaths = {
+export interface ExamplePaths {
   '/health': {
     get: {
       responses: {

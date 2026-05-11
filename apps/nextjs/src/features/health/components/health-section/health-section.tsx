@@ -5,7 +5,7 @@ import { isApiError } from '@repo/api-client'
 import { useHealth } from '../../api'
 import { HealthStatus } from '../health-status'
 
-type Props = {
+interface Props {
   prefix?: string
 }
 

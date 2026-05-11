@@ -1,7 +1,7 @@
 import styles from './card.module.scss'
 import { cn } from '../../lib/cn'
 
-type CardProps = React.ComponentPropsWithRef<'div'>
+interface CardProps extends React.ComponentPropsWithRef<'div'> {}
 
 /**
  * ```tsx

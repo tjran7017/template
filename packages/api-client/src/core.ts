@@ -8,14 +8,14 @@ import type {
   ResponseBody,
 } from './types'
 
-export type Middleware = {
+export interface Middleware {
   onRequest?: (
     init: RequestInit & { url: string },
   ) => (RequestInit & { url: string }) | Promise<RequestInit & { url: string }>
   onResponse?: (response: Response) => Response | Promise<Response>
 }
 
-export type ServiceConfig = {
+export interface ServiceConfig {
   /** 서비스별 baseURL (게이트웨이 경유 시 path prefix만 다를 수 있음) */
   baseUrl: string
   /** 매 요청마다 호출되어 토큰을 가져옴 — lazy 평가로 토큰 갱신에 자동 대응 */
@@ -29,7 +29,7 @@ export type ServiceConfig = {
 }
 
 /** path/메서드/요청/응답이 모두 OpenAPI 타입으로 추론되는 옵션 */
-type RequestOptions<Paths, P extends PathOf<Paths>, M extends Method<Paths, P>> = {
+interface RequestOptions<Paths, P extends PathOf<Paths>, M extends Method<Paths, P>> {
   method: M
   // params는 path/query 모두 있을 때만 필수, 없으면 생략 가능
   params?: {

@@ -3,7 +3,7 @@ import type { ComponentProps, ReactNode } from 'react'
 
 import styles from './back-link.module.scss'
 
-type Props = {
+interface Props {
   href: ComponentProps<typeof Link>['href']
   children: ReactNode
 }

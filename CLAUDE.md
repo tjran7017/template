@@ -6,15 +6,15 @@ Turborepo 기반 프론트엔드 모노레포 템플릿. 각 앱/패키지에는
 
 작업하려는 위치에 따라 어떤 `CLAUDE.md`를 읽어야 하는지 정리. **위에서 아래로** 누적해서 적용 (하위 문서가 우선).
 
-| 작업 위치 | 읽어야 할 문서 (순서대로) |
-|---|---|
-| 루트 설정 (`turbo.json`, `package.json` 등) | 루트 `CLAUDE.md` |
-| `apps/nextjs/` 안 어디든 | 루트 → `apps/nextjs/CLAUDE.md` |
-| `apps/react-vite/` 안 어디든 | 루트 → `apps/react-vite/CLAUDE.md` |
-| `packages/` 안 모든 곳 | 루트 → `packages/CLAUDE.md` |
-| `packages/<n>/` 개별 패키지 | 루트 → `packages/CLAUDE.md` → 해당 패키지 `CLAUDE.md` (있을 때) |
-| 두 앱에 영향을 미치는 변경 | 루트 → 두 앱 `CLAUDE.md` 모두 |
-| 패키지 + 앱에 모두 영향 | 루트 → `packages/CLAUDE.md` → 해당 앱 `CLAUDE.md` |
+| 작업 위치                                   | 읽어야 할 문서 (순서대로)                                       |
+| ------------------------------------------- | --------------------------------------------------------------- |
+| 루트 설정 (`turbo.json`, `package.json` 등) | 루트 `CLAUDE.md`                                                |
+| `apps/nextjs/` 안 어디든                    | 루트 → `apps/nextjs/CLAUDE.md`                                  |
+| `apps/react-vite/` 안 어디든                | 루트 → `apps/react-vite/CLAUDE.md`                              |
+| `packages/` 안 모든 곳                      | 루트 → `packages/CLAUDE.md`                                     |
+| `packages/<n>/` 개별 패키지                 | 루트 → `packages/CLAUDE.md` → 해당 패키지 `CLAUDE.md` (있을 때) |
+| 두 앱에 영향을 미치는 변경                  | 루트 → 두 앱 `CLAUDE.md` 모두                                   |
+| 패키지 + 앱에 모두 영향                     | 루트 → `packages/CLAUDE.md` → 해당 앱 `CLAUDE.md`               |
 
 **규칙**
 
@@ -37,6 +37,35 @@ Turborepo 기반 프론트엔드 모노레포 템플릿. 각 앱/패키지에는
 - ESM only (`"type": "module"`)
 - import 순서: 외부 라이브러리 → 워크스페이스(`@repo/*`) → 절대경로(`@/`) → 상대경로
 - 한 파일에서 default export와 named export를 섞지 않음 (named export 선호)
+
+### 타입 정의 (interface vs type)
+
+객체 형태의 타입은 `interface`를 기본으로 사용한다. `type`은 interface로 표현 불가능하거나 부적합한 경우에만 사용한다.
+
+**interface (기본값)**
+
+- 객체 형태의 모든 타입 정의
+- 컴포넌트 props 정의
+- 라이브러리/모듈의 public API
+- 도메인 모델, 엔티티 타입
+- API 요청/응답 객체 타입
+- 유틸리티 타입을 통한 객체 파생 (`extends Pick<T, K>`, `extends Omit<T, K>`, `extends Partial<T>` 등)
+- HTML 속성 확장 (`extends React.InputHTMLAttributes<...>` 등)
+
+**type (예외 — 다음 경우에만)**
+
+- 유니온 타입 (`type Status = 'idle' | 'loading' | 'success'`)
+- 튜플 타입 (`type Coord = [number, number]`)
+- 매핑된 타입 (`type Nullable<T> = T | null`)
+- 조건부 타입, `keyof`, `typeof` 등을 활용한 타입 변환
+- 원시 타입 별칭
+- interface로 extends 시 "statically known members" 에러가 발생하는 제네릭 조합
+
+**이유**
+
+- **선언 병합**: interface는 외부에서 확장 가능 (라이브러리 타입 augmentation 등)
+- **명확한 확장**: `extends` 시 충돌이 즉시 에러로 잡힘 (intersection은 `never`로 조용히 통과)
+- **에러 메시지**: interface 이름이 유지되어 IDE/에러 메시지가 깔끔함
 
 ### 네이밍
 
@@ -106,10 +135,10 @@ packages/ui ✗ packages/api-client   (UI는 데이터 비종속)
 
 ### `CLAUDE.md` vs `README.md` 역할 분리
 
-| 문서 | 독자 | 다루는 내용 |
-|---|---|---|
+| 문서            | 독자                          | 다루는 내용                                                              |
+| --------------- | ----------------------------- | ------------------------------------------------------------------------ |
 | **`CLAUDE.md`** | Claude Code, 코드 작성/수정자 | **"이걸 어떻게 작성/수정하나?"** — 컨벤션, 의존 규칙, 변경 시 체크리스트 |
-| **`README.md`** | 사용자, 면접관, 신규 합류자 | **"이게 뭐고 왜 이렇게 만들었나?"** — 소개, 사용법, 설계 의도 |
+| **`README.md`** | 사용자, 면접관, 신규 합류자   | **"이게 뭐고 왜 이렇게 만들었나?"** — 소개, 사용법, 설계 의도            |
 
 - 같은 내용을 두 문서에 중복하지 않는다
 - 새 패키지/앱 추가 시 두 문서를 **함께** 작성

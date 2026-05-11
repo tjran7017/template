@@ -20,6 +20,7 @@ export default [
       import: importPlugin,
     },
     rules: {
+      '@typescript-eslint/no-empty-object-type': 'off',
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/consistent-type-imports': [
         'error',

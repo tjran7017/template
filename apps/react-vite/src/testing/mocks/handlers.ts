@@ -1,7 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import { z } from 'zod'
 
-type Order = {
+interface Order {
   id: string
   item: string
   quantity: number

@@ -4,7 +4,7 @@ import styles from './health-status.module.scss'
 
 export type HealthStatusTone = 'ok' | 'fail'
 
-type Props = {
+interface Props {
   label: string
   tone?: HealthStatusTone
 }

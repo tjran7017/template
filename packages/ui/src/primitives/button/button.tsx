@@ -1,7 +1,7 @@
 import styles from './button.module.scss'
 import { cn } from '../../lib/cn'
 
-type ButtonProps = React.ComponentPropsWithRef<'button'> & {
+interface ButtonProps extends React.ComponentPropsWithRef<'button'> {
   variant?: 'primary' | 'secondary' | 'danger'
   size?: 'sm' | 'md' | 'lg'
 }

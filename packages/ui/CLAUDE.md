@@ -159,7 +159,7 @@ export function Button({ ... }: ButtonProps) { ... }
 native HTML element 타입을 `React.ComponentPropsWithRef<'tag'>`로 확장. `ref`는 자동 포함되므로 별도 선언 불필요:
 
 ```tsx
-type ButtonProps = React.ComponentPropsWithRef<'button'> & {
+interface ButtonProps extends React.ComponentPropsWithRef<'button'> {
   variant?: 'primary' | 'secondary' | 'danger'
   size?: 'sm' | 'md' | 'lg'
 }

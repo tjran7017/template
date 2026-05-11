@@ -133,6 +133,7 @@ pnpm --filter=@repo/ui add -D <dev-package>
 ## 컨벤션 요약
 
 - TypeScript strict, `any` 금지 (불가피하면 `unknown` + 사유 주석)
+- 타입 정의: 객체 형태는 `interface` 기본, `type`은 유니온·튜플·매핑/조건부 등 예외에만
 - 파일/폴더 `kebab-case`, 컴포넌트 `PascalCase`, 함수/변수 `camelCase`
 - 커밋: Conventional Commits (`<type>(<scope>): <subject>`)
   - type: `feat | fix | refactor | docs | test | chore | perf | style`

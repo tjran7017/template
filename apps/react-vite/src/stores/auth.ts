@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-type AuthState = {
+interface AuthState {
   accessToken: string | null
   setAccessToken: (token: string) => void
   clear: () => void
